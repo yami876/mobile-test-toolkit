@@ -301,4 +301,14 @@ const TOOLS = [
     icon: '🔐',
     internal: true,
   },
+  {
+    name: '团队工具入口',
+    desc: '收藏团队常用平台（CTC、AI 用例平台等），支持多环境切换、自由增删改，可导出 JSON 共享',
+    url: 'tools/team-portals.html',
+    platforms: ['通用'],
+    category: 'mini',
+    tags: ['入口', '导航', '收藏', 'ctc', 'aimind', '多环境'],
+    icon: '🔗',
+    internal: true,
+  },
 ];

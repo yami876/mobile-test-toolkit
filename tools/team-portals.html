@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>团队工具入口 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">🔗 团队工具入口</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <div class="flex flex-wrap gap-2 mb-6">
+      <button id="addBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">+ 添加工具</button>
+      <button id="importBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬆ 导入 JSON</button>
+      <button id="exportBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬇ 导出 JSON</button>
+      <button id="resetBtn" class="ml-auto px-4 py-2 text-red-600 hover:text-red-700 text-sm">恢复默认</button>
+      <input id="importFile" type="file" accept=".json" class="hidden" />
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-900">
+      💡 数据保存在你的浏览器本地（localStorage），换电脑或清浏览器数据会丢失。要分享给同事请用「导出 JSON」生成文件，对方「导入 JSON」即可同步列表。
+    </div>
+
+    <div id="cardGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="emptyState" class="hidden text-center py-16 text-slate-400">
+      还没有工具，点上方「+ 添加工具」开始
+    </div>
+
+  </main>
+
+  <!-- 添加/编辑 模态框 -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h2 id="modalTitle" class="text-lg font-semibold text-slate-800">添加工具入口</h2>
+        <button id="modalClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+
+        <div class="grid grid-cols-[100px_1fr] gap-3">
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">图标</label>
+            <input id="fIcon" type="text" maxlength="4" placeholder="🔧"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none text-center text-2xl" />
+          </div>
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">名称 <span class="text-red-500">*</span></label>
+            <input id="fName" type="text" placeholder="如 CTC"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">描述</label>
+          <input id="fDesc" type="text" placeholder="一句话说明（可选）"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+
+        <div class="border-t border-slate-100 pt-4">
+          <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input id="fMulti" type="checkbox" class="w-4 h-4" />
+            <span><strong>多环境</strong>（不同环境用不同 URL，点击时弹窗选环境）</span>
+          </label>
+        </div>
+
+        <div id="singleEnvWrap">
+          <label class="text-sm text-slate-600 mb-1 block">URL <span class="text-red-500">*</span></label>
+          <input id="fUrl" type="url" placeholder="https://..."
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+
+        <div id="multiEnvWrap" class="hidden">
+          <label class="text-sm text-slate-600 mb-2 block">环境列表 <span class="text-red-500">*</span></label>
+          <div id="envList" class="space-y-2"></div>
+          <button id="addEnvBtn" type="button" class="mt-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded text-sm text-slate-700">+ 添加环境</button>
+        </div>
+
+      </div>
+      <div class="p-6 border-t border-slate-200 flex justify-end gap-2">
+        <button id="cancelBtn" class="px-4 py-2 text-slate-600 hover:text-slate-800">取消</button>
+        <button id="saveBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 多环境选择弹窗 -->
+  <div id="envPicker" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-40">
+    <div class="bg-white rounded-lg max-w-md w-full">
+      <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800" id="pickerTitle">选择环境</h2>
+        <button id="pickerClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div id="pickerList" class="p-3 space-y-1.5"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'mtt-portals-v1';
+    const DEFAULT_DATA = {
+      version: 1,
+      portals: [
+        {
+          id: 'ctc',
+          icon: '📋',
+          name: 'CTC',
+          desc: '测试用例管理平台',
+          envs: [{ name: '生产', url: 'https://ctc-next.makeblock.com/#/workplace' }]
+        },
+        {
+          id: 'aimind',
+          icon: '🤖',
+          name: 'AI 用例平台',
+          desc: 'AI 辅助生成测试用例',
+          envs: [{ name: '生产', url: 'https://aimind.makeblock.com/login' }]
+        }
+      ]
+    };
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+        return JSON.parse(raw);
+      } catch (e) {
+        return JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+    }
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+    function escapeHtml(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function newId() {
+      return 'p-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    }
+
+    let state = load();
+    if (!localStorage.getItem(STORAGE_KEY)) save();
+    let editingId = null;
+
+    // ========== 渲染卡片 ==========
+    function render() {
+      const grid = document.getElementById('cardGrid');
+      const empty = document.getElementById('emptyState');
+      if (state.portals.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = state.portals.map(p => {
+        const isMulti = p.envs.length > 1;
+        const action = isMulti
+          ? `<button data-id="${p.id}" data-action="pick" class="action-btn flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 text-sm font-medium">选择环境（${p.envs.length}）→</button>`
+          : `<button data-id="${p.id}" data-action="open" class="action-btn flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">打开 →</button>`;
+        return `
+          <div class="bg-white rounded-lg border border-slate-200 p-5 hover:shadow-md transition group">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-xl shrink-0">${p.icon || '🔗'}</div>
+                <div class="min-w-0">
+                  <h3 class="font-semibold text-slate-800 truncate">${escapeHtml(p.name)}</h3>
+                  ${p.desc ? `<p class="text-xs text-slate-500 mt-0.5 truncate">${escapeHtml(p.desc)}</p>` : ''}
+                </div>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                <button data-id="${p.id}" data-action="edit" class="action-btn p-1.5 hover:bg-slate-100 rounded text-slate-500" title="编辑">✏️</button>
+                <button data-id="${p.id}" data-action="del" class="action-btn p-1.5 hover:bg-red-50 rounded text-slate-500" title="删除">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">${action}</div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.id));
+      });
+    }
+
+    function handleAction(action, id) {
+      const portal = state.portals.find(x => x.id === id);
+      if (!portal) return;
+      if (action === 'open') {
+        window.open(portal.envs[0].url, '_blank');
+      } else if (action === 'pick') {
+        showEnvPicker(portal);
+      } else if (action === 'edit') {
+        openModal(portal);
+      } else if (action === 'del') {
+        if (confirm(`确定删除「${portal.name}」吗？`)) {
+          state.portals = state.portals.filter(x => x.id !== id);
+          save();
+          render();
+        }
+      }
+    }
+
+    // ========== 环境选择弹窗 ==========
+    function showEnvPicker(portal) {
+      const picker = document.getElementById('envPicker');
+      document.getElementById('pickerTitle').textContent = `${portal.icon || '🔗'}  ${portal.name} - 选择环境`;
+      document.getElementById('pickerList').innerHTML = portal.envs.map((e, i) => `
+        <button class="env-pick-btn w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition text-left" data-idx="${i}">
+          <div class="min-w-0">
+            <div class="font-medium text-slate-800">${escapeHtml(e.name)}</div>
+            <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(e.url)}</div>
+          </div>
+          <span class="text-slate-400 shrink-0 ml-3">→</span>
+        </button>
+      `).join('');
+      picker.classList.remove('hidden');
+      document.querySelectorAll('.env-pick-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.open(portal.envs[Number(btn.dataset.idx)].url, '_blank');
+          picker.classList.add('hidden');
+        });
+      });
+    }
+    document.getElementById('pickerClose').addEventListener('click', () => {
+      document.getElementById('envPicker').classList.add('hidden');
+    });
+    document.getElementById('envPicker').addEventListener('click', e => {
+      if (e.target.id === 'envPicker') e.target.classList.add('hidden');
+    });
+
+    // ========== 添加/编辑模态框 ==========
+    function openModal(portal) {
+      editingId = portal ? portal.id : null;
+      document.getElementById('modalTitle').textContent = portal ? '编辑工具入口' : '添加工具入口';
+      document.getElementById('fIcon').value = portal ? (portal.icon || '') : '';
+      document.getElementById('fName').value = portal ? portal.name : '';
+      document.getElementById('fDesc').value = portal ? (portal.desc || '') : '';
+      const isMulti = portal && portal.envs.length > 1;
+      document.getElementById('fMulti').checked = isMulti;
+      document.getElementById('fUrl').value = portal && !isMulti ? portal.envs[0].url : '';
+      renderEnvList(portal && isMulti ? portal.envs : []);
+      toggleEnvWrap();
+      document.getElementById('modal').classList.remove('hidden');
+    }
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+      editingId = null;
+    }
+    function toggleEnvWrap() {
+      const multi = document.getElementById('fMulti').checked;
+      document.getElementById('singleEnvWrap').classList.toggle('hidden', multi);
+      document.getElementById('multiEnvWrap').classList.toggle('hidden', !multi);
+      if (multi && document.getElementById('envList').children.length === 0) {
+        renderEnvList([{ name: '生产', url: '' }, { name: '测试', url: '' }]);
+      }
+    }
+    function envRow(env) {
+      return `
+        <div class="env-row flex gap-2">
+          <input type="text" placeholder="环境名" value="${escapeHtml(env.name || '')}" class="env-name w-24 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none" />
+          <input type="url" placeholder="https://..." value="${escapeHtml(env.url || '')}" class="env-url flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none" />
+          <button type="button" class="env-del px-3 text-red-500 hover:text-red-700" title="删除该环境">×</button>
+        </div>
+      `;
+    }
+    function renderEnvList(envs) {
+      document.getElementById('envList').innerHTML = envs.map(e => envRow(e)).join('');
+      bindEnvRowEvents();
+    }
+    function bindEnvRowEvents() {
+      document.querySelectorAll('.env-row .env-del').forEach(btn => {
+        btn.onclick = () => btn.closest('.env-row').remove();
+      });
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => openModal(null));
+    document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target.id === 'modal') closeModal();
+    });
+    document.getElementById('fMulti').addEventListener('change', toggleEnvWrap);
+    document.getElementById('addEnvBtn').addEventListener('click', () => {
+      document.getElementById('envList').insertAdjacentHTML('beforeend', envRow({ name: '', url: '' }));
+      bindEnvRowEvents();
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const icon = document.getElementById('fIcon').value.trim();
+      const name = document.getElementById('fName').value.trim();
+      const desc = document.getElementById('fDesc').value.trim();
+      const multi = document.getElementById('fMulti').checked;
+
+      if (!name) { alert('请填写名称'); return; }
+
+      let envs = [];
+      if (multi) {
+        document.querySelectorAll('#envList .env-row').forEach(row => {
+          const n = row.querySelector('.env-name').value.trim();
+          const u = row.querySelector('.env-url').value.trim();
+          if (n && u) envs.push({ name: n, url: u });
+        });
+        if (envs.length === 0) { alert('请至少填写一个完整的环境（环境名 + URL）'); return; }
+      } else {
+        const url = document.getElementById('fUrl').value.trim();
+        if (!url) { alert('请填写 URL'); return; }
+        envs = [{ name: '默认', url }];
+      }
+
+      if (editingId) {
+        const p = state.portals.find(x => x.id === editingId);
+        Object.assign(p, { icon, name, desc, envs });
+      } else {
+        state.portals.push({ id: newId(), icon, name, desc, envs });
+      }
+      save();
+      render();
+      closeModal();
+    });
+
+    // ========== 导入 / 导出 / 重置 ==========
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `team-portals-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('importFile').click();
+    });
+
+    document.getElementById('importFile').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (!data.portals || !Array.isArray(data.portals)) throw new Error('JSON 格式不对，缺少 portals 数组');
+          const merge = confirm(`将导入 ${data.portals.length} 个工具入口。\n\n[确定] 合并：保留现有，按名称去重\n[取消] 覆盖：清空现有，全部替换`);
+          if (merge) {
+            const existing = new Set(state.portals.map(p => p.name));
+            data.portals.forEach(p => {
+              if (!existing.has(p.name)) {
+                state.portals.push({ ...p, id: newId() });
+              }
+            });
+          } else {
+            state = { version: 1, portals: data.portals.map(p => ({ ...p, id: newId() })) };
+          }
+          save();
+          render();
+          alert('导入完成');
+        } catch (err) {
+          alert('导入失败：' + err.message);
+        }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm('确定恢复默认列表吗？\n所有自定义内容会被清除。')) {
+        state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        save();
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
