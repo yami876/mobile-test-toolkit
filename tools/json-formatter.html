@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON 格式化 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .mono { font-family: "Cascadia Code", "Consolas", "Menlo", monospace; }
+    .json-key { color: #0369a1; }
+    .json-string { color: #047857; }
+    .json-number { color: #b45309; }
+    .json-boolean { color: #7c3aed; }
+    .json-null { color: #9ca3af; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">🧩 JSON 格式化</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button id="formatBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">🎨 格式化</button>
+      <button id="minifyBtn" class="px-5 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 text-sm">📦 压缩</button>
+      <button id="escapeBtn" class="px-5 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">↗ 转义</button>
+      <button id="unescapeBtn" class="px-5 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">↙ 去转义</button>
+      <button id="sampleBtn" class="px-5 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">📋 示例</button>
+      <button id="clearBtn" class="px-5 py-2 text-slate-500 hover:text-slate-700 text-sm">清空</button>
+      <span class="ml-auto self-center">
+        <label class="text-sm text-slate-600">缩进
+          <select id="indent" class="ml-1 px-2 py-1 rounded border border-slate-300 text-sm">
+            <option value="2">2 空格</option>
+            <option value="4">4 空格</option>
+            <option value="\t">Tab</option>
+          </select>
+        </label>
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- 输入 -->
+      <div class="bg-white rounded-lg border border-slate-200 flex flex-col">
+        <div class="px-4 py-2 border-b border-slate-200 text-sm text-slate-600 flex items-center justify-between">
+          <span>输入</span>
+          <span id="inputStatus" class="text-xs"></span>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder='粘贴 JSON 到这里…&#10;例：{"name":"yami","tags":["test","qa"]}'
+          class="mono w-full p-4 text-sm h-[28rem] focus:outline-none resize-y"></textarea>
+      </div>
+
+      <!-- 输出 -->
+      <div class="bg-white rounded-lg border border-slate-200 flex flex-col">
+        <div class="px-4 py-2 border-b border-slate-200 text-sm text-slate-600 flex items-center justify-between">
+          <span>输出</span>
+          <button id="copyOut" class="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">复制</button>
+        </div>
+        <pre id="output" class="mono w-full p-4 text-sm h-[28rem] overflow-auto whitespace-pre-wrap break-all"></pre>
+      </div>
+    </div>
+
+    <div id="errorBox" class="hidden mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800"></div>
+
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    function getIndent() {
+      const v = $('indent').value;
+      return v === '\\t' ? '\t' : Number(v);
+    }
+
+    function highlight(json) {
+      return json
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+          let cls = 'json-number';
+          if (/^"/.test(m)) cls = /:$/.test(m) ? 'json-key' : 'json-string';
+          else if (/true|false/.test(m)) cls = 'json-boolean';
+          else if (/null/.test(m)) cls = 'json-null';
+          return `<span class="${cls}">${m}</span>`;
+        });
+    }
+
+    function showError(msg) {
+      $('errorBox').classList.remove('hidden');
+      $('errorBox').textContent = '❌ ' + msg;
+      $('inputStatus').innerHTML = '<span class="text-red-600">语法错误</span>';
+    }
+    function clearError() {
+      $('errorBox').classList.add('hidden');
+      $('inputStatus').innerHTML = '';
+    }
+
+    function format() {
+      clearError();
+      const raw = $('input').value;
+      if (!raw.trim()) { $('output').innerHTML = ''; return; }
+      try {
+        const obj = JSON.parse(raw);
+        const out = JSON.stringify(obj, null, getIndent());
+        $('output').innerHTML = highlight(out);
+        $('inputStatus').innerHTML = `<span class="text-green-600">✓ 合法 JSON · ${(new Blob([out]).size / 1024).toFixed(2)} KB</span>`;
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    function minify() {
+      clearError();
+      try {
+        const obj = JSON.parse($('input').value);
+        const out = JSON.stringify(obj);
+        $('output').innerHTML = highlight(out);
+        $('inputStatus').innerHTML = `<span class="text-green-600">✓ 压缩完成 · ${(new Blob([out]).size / 1024).toFixed(2)} KB</span>`;
+      } catch (e) { showError(e.message); }
+    }
+
+    function escapeStr() {
+      const raw = $('input').value;
+      $('output').textContent = JSON.stringify(raw);
+      $('inputStatus').innerHTML = '<span class="text-slate-500">已转义</span>';
+    }
+
+    function unescapeStr() {
+      try {
+        const out = JSON.parse($('input').value);
+        $('output').textContent = typeof out === 'string' ? out : JSON.stringify(out, null, 2);
+        $('inputStatus').innerHTML = '<span class="text-slate-500">已去转义</span>';
+      } catch (e) { showError('请输入带双引号的转义字符串'); }
+    }
+
+    $('formatBtn').onclick = format;
+    $('minifyBtn').onclick = minify;
+    $('escapeBtn').onclick = escapeStr;
+    $('unescapeBtn').onclick = unescapeStr;
+    $('clearBtn').onclick = () => { $('input').value = ''; $('output').innerHTML = ''; clearError(); };
+    $('sampleBtn').onclick = () => {
+      $('input').value = '{"id":1024,"name":"测试机A","tags":["android","real"],"specs":{"os":"Android 14","ram":12,"available":true,"notes":null}}';
+      format();
+    };
+    $('input').addEventListener('input', () => {
+      // 实时简单校验
+      const raw = $('input').value.trim();
+      if (!raw) { clearError(); return; }
+      try { JSON.parse(raw); $('inputStatus').innerHTML = '<span class="text-green-600">✓ 合法</span>'; clearError(); }
+      catch (e) { $('inputStatus').innerHTML = '<span class="text-amber-600">⚠ ' + e.message + '</span>'; }
+    });
+
+    $('copyOut').onclick = async () => {
+      const text = $('output').textContent;
+      if (!text) return;
+      try { await navigator.clipboard.writeText(text); $('copyOut').textContent = '已复制'; setTimeout(() => $('copyOut').textContent = '复制', 1200); }
+      catch (e) { alert('复制失败'); }
+    };
+  </script>
+</body>
+</html>

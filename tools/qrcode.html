@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>二维码生成 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📱 二维码生成</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- 配置 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">输入内容</h2>
+
+      <textarea id="textInput" rows="6" placeholder="输入文本或 URL，自动生成二维码"
+        class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 mb-4"></textarea>
+
+      <div class="space-y-3 mb-4">
+        <div>
+          <label class="text-sm text-slate-600 flex items-center justify-between">
+            尺寸 <span id="sizeLabel" class="text-slate-500 font-mono">240 px</span>
+          </label>
+          <input id="sizeRange" type="range" min="120" max="400" step="20" value="240" class="w-full" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">前景色</label>
+            <input id="fgColor" type="color" value="#000000" class="w-full h-9 rounded cursor-pointer" />
+          </div>
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">背景色</label>
+            <input id="bgColor" type="color" value="#ffffff" class="w-full h-9 rounded cursor-pointer" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">容错级别</label>
+          <select id="level" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+            <option value="L">L · 低（约 7%）</option>
+            <option value="M">M · 中（约 15%）</option>
+            <option value="Q">Q · 较高（约 25%）</option>
+            <option value="H" selected>H · 高（约 30%，推荐）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="sampleBtn" class="flex-1 px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">填入示例</button>
+        <button id="clearBtn" class="flex-1 px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">清空</button>
+      </div>
+    </section>
+
+    <!-- 预览 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 flex flex-col items-center justify-center">
+      <h2 class="font-semibold text-slate-800 mb-4 self-start">预览</h2>
+      <div id="qrcode" class="p-4 rounded"></div>
+      <p id="hint" class="text-sm text-slate-400 mt-4">在左侧输入内容后自动生成</p>
+      <button id="downloadBtn" class="hidden mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">⬇ 下载图片</button>
+    </section>
+
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let qr = null;
+
+    function generate() {
+      const text = $('textInput').value;
+      const size = Number($('sizeRange').value);
+      const fg = $('fgColor').value;
+      const bg = $('bgColor').value;
+      const level = $('level').value;
+
+      $('qrcode').innerHTML = '';
+      $('qrcode').style.backgroundColor = bg;
+
+      if (!text.trim()) {
+        $('hint').classList.remove('hidden');
+        $('downloadBtn').classList.add('hidden');
+        return;
+      }
+      $('hint').classList.add('hidden');
+
+      qr = new QRCode($('qrcode'), {
+        text,
+        width: size,
+        height: size,
+        colorDark: fg,
+        colorLight: bg,
+        correctLevel: QRCode.CorrectLevel[level],
+      });
+      $('downloadBtn').classList.remove('hidden');
+    }
+
+    ['textInput', 'sizeRange', 'fgColor', 'bgColor', 'level'].forEach(id => {
+      $(id).addEventListener('input', generate);
+    });
+    $('sizeRange').addEventListener('input', () => {
+      $('sizeLabel').textContent = $('sizeRange').value + ' px';
+    });
+
+    $('sampleBtn').onclick = () => { $('textInput').value = 'https://github.com'; generate(); };
+    $('clearBtn').onclick = () => { $('textInput').value = ''; generate(); };
+
+    $('downloadBtn').onclick = () => {
+      const canvas = $('qrcode').querySelector('canvas');
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = 'qrcode.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+  </script>
+</body>
+</html>

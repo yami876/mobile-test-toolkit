@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base64 / URL 编解码 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .mono { font-family: "Cascadia Code", "Consolas", "Menlo", monospace; }
+    .tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">🔐 Base64 / URL 编解码</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+
+    <!-- 模式切换 -->
+    <div class="flex gap-2 mb-6">
+      <button data-mode="base64" class="tab active px-4 py-2 rounded-lg border bg-white text-slate-600 border-slate-200 text-sm">Base64</button>
+      <button data-mode="url" class="tab px-4 py-2 rounded-lg border bg-white text-slate-600 border-slate-200 text-sm">URL 编码</button>
+      <button data-mode="unicode" class="tab px-4 py-2 rounded-lg border bg-white text-slate-600 border-slate-200 text-sm">Unicode 转义</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- 原文 -->
+      <div class="bg-white rounded-lg border border-slate-200 flex flex-col">
+        <div class="px-4 py-2 border-b border-slate-200 text-sm text-slate-600 flex items-center justify-between">
+          <span>原文</span>
+          <button id="copyRaw" class="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">复制</button>
+        </div>
+        <textarea id="raw" spellcheck="false" placeholder="支持中文，自动 UTF-8 处理"
+          class="mono w-full p-4 text-sm h-72 focus:outline-none resize-y"></textarea>
+      </div>
+
+      <!-- 编码后 -->
+      <div class="bg-white rounded-lg border border-slate-200 flex flex-col">
+        <div class="px-4 py-2 border-b border-slate-200 text-sm text-slate-600 flex items-center justify-between">
+          <span id="encodedLabel">Base64</span>
+          <button id="copyEncoded" class="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">复制</button>
+        </div>
+        <textarea id="encoded" spellcheck="false"
+          class="mono w-full p-4 text-sm h-72 focus:outline-none resize-y"></textarea>
+      </div>
+    </div>
+
+    <div id="errBox" class="hidden mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800"></div>
+
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-5 text-sm text-blue-900 space-y-1">
+      <h3 class="font-semibold mb-1">💡 速查</h3>
+      <div>· 左侧编辑会自动编码；右侧编辑会自动解码 —— 双向实时</div>
+      <div>· <strong>Base64</strong>：常见于接口传图片、token、二进制数据</div>
+      <div>· <strong>URL 编码</strong>：等同于 <code class="bg-blue-100 px-1">encodeURIComponent</code>，处理中文/特殊字符</div>
+      <div>· <strong>Unicode 转义</strong>：<code class="bg-blue-100 px-1">中文 ↔ 中文</code>，常见于 JSON 字符串</div>
+    </div>
+
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let mode = 'base64';
+    let lock = false;
+
+    function showError(msg) {
+      $('errBox').classList.remove('hidden');
+      $('errBox').textContent = '❌ ' + msg;
+    }
+    function clearError() { $('errBox').classList.add('hidden'); }
+
+    function encode(text) {
+      if (!text) return '';
+      if (mode === 'base64') {
+        return btoa(unescape(encodeURIComponent(text)));
+      } else if (mode === 'url') {
+        return encodeURIComponent(text);
+      } else {
+        return text.replace(/[-￿]/g, c =>
+          '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4)
+        );
+      }
+    }
+
+    function decode(text) {
+      if (!text) return '';
+      if (mode === 'base64') {
+        return decodeURIComponent(escape(atob(text.replace(/\s/g, ''))));
+      } else if (mode === 'url') {
+        return decodeURIComponent(text);
+      } else {
+        return text.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+      }
+    }
+
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('.tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === m);
+      });
+      $('encodedLabel').textContent = m === 'base64' ? 'Base64' : (m === 'url' ? 'URL 编码后' : 'Unicode 转义后');
+      // 触发重新编码
+      if ($('raw').value) {
+        try { $('encoded').value = encode($('raw').value); clearError(); }
+        catch (e) { showError(e.message); }
+      }
+    }
+
+    document.querySelectorAll('.tab').forEach(b => {
+      b.addEventListener('click', () => setMode(b.dataset.mode));
+    });
+
+    $('raw').addEventListener('input', () => {
+      if (lock) return;
+      lock = true;
+      try { $('encoded').value = encode($('raw').value); clearError(); }
+      catch (e) { showError(e.message); }
+      lock = false;
+    });
+
+    $('encoded').addEventListener('input', () => {
+      if (lock) return;
+      lock = true;
+      try { $('raw').value = decode($('encoded').value); clearError(); }
+      catch (e) { showError('解码失败：' + e.message); }
+      lock = false;
+    });
+
+    async function copyById(id, btn) {
+      const text = $(id).value;
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const old = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(() => btn.textContent = old, 1200);
+      } catch (e) { alert('复制失败'); }
+    }
+    $('copyRaw').onclick = e => copyById('raw', e.target);
+    $('copyEncoded').onclick = e => copyById('encoded', e.target);
+  </script>
+</body>
+</html>

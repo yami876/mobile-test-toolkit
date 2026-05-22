@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>时间戳转换 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">⏱️ 时间戳转换</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">
+
+    <!-- 当前时间 -->
+    <section class="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-lg p-6">
+      <h2 class="text-sm text-slate-300 mb-4">当前时间</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <div class="text-xs text-slate-400 mb-1">秒</div>
+          <div id="nowSec" class="text-2xl font-mono cursor-pointer hover:text-blue-300" title="点击复制">-</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">毫秒</div>
+          <div id="nowMs" class="text-2xl font-mono cursor-pointer hover:text-blue-300" title="点击复制">-</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-1">本地时间</div>
+          <div id="nowLocal" class="text-2xl font-mono">-</div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400 mt-3">点击数字复制 · 每秒自动刷新</p>
+    </section>
+
+    <!-- 时间戳转日期 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">🔢 时间戳 → 日期</h2>
+      <div class="flex gap-2 mb-3">
+        <input id="tsInput" type="text" placeholder="输入时间戳，自动判断秒/毫秒"
+          class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono" />
+        <button id="tsToDateBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">转换</button>
+      </div>
+      <div id="tsResult" class="hidden bg-slate-50 rounded-lg p-4 space-y-2 text-sm"></div>
+    </section>
+
+    <!-- 日期转时间戳 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">📅 日期 → 时间戳</h2>
+      <div class="flex gap-2 mb-3">
+        <input id="dateInput" type="text" placeholder="2026-05-22 15:30:00 或 2026/5/22 等格式"
+          class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono" />
+        <button id="dateToTsBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">转换</button>
+      </div>
+      <div id="dateResult" class="hidden bg-slate-50 rounded-lg p-4 space-y-2 text-sm"></div>
+    </section>
+
+    <!-- 速查 -->
+    <section class="bg-blue-50 border border-blue-200 rounded-lg p-5 text-sm text-blue-900">
+      <h3 class="font-semibold mb-2">💡 速查</h3>
+      <ul class="space-y-1">
+        <li>· <strong>10 位</strong>数字 = 秒级时间戳（Java/Go/PHP 常用）</li>
+        <li>· <strong>13 位</strong>数字 = 毫秒级时间戳（JavaScript 默认）</li>
+        <li>· UTC 时间 = 本地时间 - 时区偏移；中国大陆为 UTC+8</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <script>
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function fmt(d) {
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function tick() {
+      const now = Date.now();
+      document.getElementById('nowSec').textContent = Math.floor(now / 1000);
+      document.getElementById('nowMs').textContent = now;
+      document.getElementById('nowLocal').textContent = fmt(new Date(now));
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    async function copy(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) { return false; }
+    }
+
+    ['nowSec', 'nowMs'].forEach(id => {
+      document.getElementById(id).addEventListener('click', async (e) => {
+        const ok = await copy(e.target.textContent);
+        if (ok) {
+          const old = e.target.style.color;
+          e.target.style.color = '#34d399';
+          setTimeout(() => e.target.style.color = old, 600);
+        }
+      });
+    });
+
+    document.getElementById('tsToDateBtn').addEventListener('click', () => {
+      const raw = document.getElementById('tsInput').value.trim();
+      if (!/^\d+$/.test(raw)) { alert('请输入纯数字时间戳'); return; }
+      let ms = Number(raw);
+      // 10 位以下当作秒，13 位以上当作毫秒
+      const isSec = raw.length <= 10;
+      if (isSec) ms = ms * 1000;
+      const d = new Date(ms);
+      if (isNaN(d.getTime())) { alert('无效时间戳'); return; }
+      document.getElementById('tsResult').classList.remove('hidden');
+      document.getElementById('tsResult').innerHTML = `
+        <div class="flex justify-between gap-3"><span class="text-slate-500">类型识别</span><span class="font-mono">${isSec ? '秒级（10 位）' : '毫秒级（13 位）'}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">本地时间</span><span class="font-mono font-semibold text-slate-800">${fmt(d)}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">UTC 时间</span><span class="font-mono">${d.toISOString().replace('T', ' ').slice(0, 19)}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">秒级时间戳</span><span class="font-mono">${Math.floor(ms / 1000)}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">毫秒级时间戳</span><span class="font-mono">${ms}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">星期</span><span class="font-mono">星期${['日','一','二','三','四','五','六'][d.getDay()]}</span></div>
+      `;
+    });
+
+    document.getElementById('dateToTsBtn').addEventListener('click', () => {
+      let raw = document.getElementById('dateInput').value.trim();
+      if (!raw) { alert('请输入日期'); return; }
+      raw = raw.replace(/\//g, '-');
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) { alert('日期解析失败，试试 2026-05-22 15:30:00 格式'); return; }
+      const ms = d.getTime();
+      document.getElementById('dateResult').classList.remove('hidden');
+      document.getElementById('dateResult').innerHTML = `
+        <div class="flex justify-between gap-3"><span class="text-slate-500">解析为</span><span class="font-mono">${fmt(d)}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">秒级时间戳</span><span class="font-mono font-semibold text-slate-800">${Math.floor(ms / 1000)}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">毫秒级时间戳</span><span class="font-mono font-semibold text-slate-800">${ms}</span></div>
+        <div class="flex justify-between gap-3"><span class="text-slate-500">ISO</span><span class="font-mono text-xs">${d.toISOString()}</span></div>
+      `;
+    });
+  </script>
+</body>
+</html>

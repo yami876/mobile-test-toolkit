@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>颜色对比 / 取色 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .mono { font-family: "Cascadia Code", "Consolas", "Menlo", monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">🎨 颜色对比 / 取色</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+
+    <!-- 颜色对比 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">🆚 颜色对比（设计稿 vs 实测）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-600 mb-2 block">颜色 A（设计稿）</label>
+          <div class="flex gap-2 mb-2">
+            <input id="colorA" type="color" value="#3b82f6" class="w-16 h-10 rounded cursor-pointer" />
+            <input id="hexA" type="text" value="#3b82f6" class="mono flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div id="boxA" class="h-24 rounded-lg border border-slate-200" style="background:#3b82f6"></div>
+          <div id="infoA" class="mt-2 text-xs text-slate-600 space-y-0.5"></div>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-2 block">颜色 B（实测）</label>
+          <div class="flex gap-2 mb-2">
+            <input id="colorB" type="color" value="#2563eb" class="w-16 h-10 rounded cursor-pointer" />
+            <input id="hexB" type="text" value="#2563eb" class="mono flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div id="boxB" class="h-24 rounded-lg border border-slate-200" style="background:#2563eb"></div>
+          <div id="infoB" class="mt-2 text-xs text-slate-600 space-y-0.5"></div>
+        </div>
+      </div>
+
+      <div class="mt-6 bg-slate-50 rounded-lg p-4">
+        <h3 class="font-semibold text-slate-700 mb-2 text-sm">差异分析</h3>
+        <div id="diffInfo" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+      </div>
+    </section>
+
+    <!-- 对比度计算 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">♿ 文字对比度（WCAG）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div>
+          <p class="text-sm text-slate-600 mb-3">用上面的颜色 A 作前景、颜色 B 作背景，检查文字是否符合可访问性标准。</p>
+          <div id="contrastRatio" class="text-4xl font-bold text-slate-800 mb-2">-</div>
+          <div id="contrastLabel" class="text-sm text-slate-500"></div>
+        </div>
+        <div id="contrastPreview" class="p-6 rounded-lg" style="background:#2563eb;color:#3b82f6">
+          <div class="text-xl font-bold mb-1">大号文字示例</div>
+          <div class="text-sm">这是正文示例，看看是否清晰可读？</div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        <div class="px-2 py-1.5 rounded bg-slate-100 text-center"><strong>AA 正文</strong><br/>≥ 4.5</div>
+        <div class="px-2 py-1.5 rounded bg-slate-100 text-center"><strong>AA 大字</strong><br/>≥ 3.0</div>
+        <div class="px-2 py-1.5 rounded bg-slate-100 text-center"><strong>AAA 正文</strong><br/>≥ 7.0</div>
+        <div class="px-2 py-1.5 rounded bg-slate-100 text-center"><strong>AAA 大字</strong><br/>≥ 4.5</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    function hexToRgb(hex) {
+      const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
+      if (!m) return null;
+      const n = parseInt(m[1], 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function rgbToHsl([r, g, b]) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) { h = s = 0; }
+      else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+    }
+    function luminance([r, g, b]) {
+      const [R, G, B] = [r, g, b].map(v => {
+        v = v / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+    }
+    function contrast(rgb1, rgb2) {
+      const l1 = luminance(rgb1), l2 = luminance(rgb2);
+      const [a, b] = l1 > l2 ? [l1, l2] : [l2, l1];
+      return (a + 0.05) / (b + 0.05);
+    }
+    function colorDistance(rgb1, rgb2) {
+      return Math.sqrt(
+        Math.pow(rgb1[0] - rgb2[0], 2) +
+        Math.pow(rgb1[1] - rgb2[1], 2) +
+        Math.pow(rgb1[2] - rgb2[2], 2)
+      );
+    }
+
+    function fmtInfo(rgb) {
+      if (!rgb) return '';
+      const hsl = rgbToHsl(rgb);
+      return `
+        <div>RGB <span class="mono text-slate-800">${rgb.join(', ')}</span></div>
+        <div>HSL <span class="mono text-slate-800">${hsl[0]}°, ${hsl[1]}%, ${hsl[2]}%</span></div>
+      `;
+    }
+
+    function refresh() {
+      const ha = $('hexA').value.trim();
+      const hb = $('hexB').value.trim();
+      const ra = hexToRgb(ha), rb = hexToRgb(hb);
+      if (!ra || !rb) return;
+
+      $('colorA').value = ha;
+      $('colorB').value = hb;
+      $('boxA').style.background = ha;
+      $('boxB').style.background = hb;
+      $('infoA').innerHTML = fmtInfo(ra);
+      $('infoB').innerHTML = fmtInfo(rb);
+
+      const dist = colorDistance(ra, rb);
+      const cr = contrast(ra, rb);
+      const same = dist < 1 ? '完全一致 ✅' : (dist < 10 ? '几乎一致 👌' : (dist < 30 ? '有差异 ⚠️' : '明显不同 ❌'));
+
+      $('diffInfo').innerHTML = `
+        <div><div class="text-slate-500">RGB 欧氏距离</div><div class="mono font-semibold text-slate-800">${dist.toFixed(2)}</div></div>
+        <div><div class="text-slate-500">判定</div><div class="font-semibold text-slate-800">${same}</div></div>
+        <div><div class="text-slate-500">对比度</div><div class="mono font-semibold text-slate-800">${cr.toFixed(2)} : 1</div></div>
+        <div><div class="text-slate-500">是否一致</div><div class="font-semibold ${ha.toLowerCase()===hb.toLowerCase()?'text-green-600':'text-amber-600'}">${ha.toLowerCase()===hb.toLowerCase()?'是':'否'}</div></div>
+      `;
+
+      $('contrastRatio').textContent = cr.toFixed(2) + ' : 1';
+      let label = '';
+      if (cr >= 7) label = '✅ AAA 通过（正文、大字）';
+      else if (cr >= 4.5) label = '✅ AA 通过（正文、大字）';
+      else if (cr >= 3) label = '⚠️ 仅 AA 大字通过（≥18pt 或 14pt 粗体）';
+      else label = '❌ 对比度不足，建议调整';
+      $('contrastLabel').textContent = label;
+
+      $('contrastPreview').style.background = hb;
+      $('contrastPreview').style.color = ha;
+    }
+
+    ['colorA', 'colorB'].forEach(id => {
+      $(id).addEventListener('input', e => {
+        $(id === 'colorA' ? 'hexA' : 'hexB').value = e.target.value;
+        refresh();
+      });
+    });
+    ['hexA', 'hexB'].forEach(id => {
+      $(id).addEventListener('input', refresh);
+    });
+    refresh();
+  </script>
+</body>
+</html>

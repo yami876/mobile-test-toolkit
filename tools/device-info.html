@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设备信息收集 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📋 设备信息收集</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-6 py-8">
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-900">
+      💡 在<strong>被测设备的浏览器</strong>打开本页面，会自动检测当前设备信息；下方手动填写补充字段，点击"生成报告"导出 Markdown，直接粘贴到 bug 单。
+    </div>
+
+    <!-- 自动检测 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 mb-6">
+      <h2 class="font-semibold text-slate-800 mb-4">🔍 自动检测</h2>
+      <table class="w-full text-sm">
+        <tbody id="autoTable"></tbody>
+      </table>
+    </section>
+
+    <!-- 手动填写 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 mb-6">
+      <h2 class="font-semibold text-slate-800 mb-4">✏️ 手动补充</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">设备型号</label>
+          <input id="model" type="text" placeholder="如 iPhone 15 Pro / Xiaomi 14"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">系统版本</label>
+          <input id="osVersion" type="text" placeholder="如 iOS 17.2 / MIUI 14"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">App 版本</label>
+          <input id="appVersion" type="text" placeholder="如 v3.5.0 (1234)"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">环境</label>
+          <select id="env" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            <option>生产</option><option>预发</option><option>测试</option><option>开发</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">网络</label>
+          <select id="network" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            <option>WiFi</option><option>5G</option><option>4G</option><option>3G</option><option>弱网</option><option>无网</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">复现概率</label>
+          <select id="repro" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            <option>100% 必现</option><option>偶现</option><option>仅一次</option><option>未知</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm text-slate-600 mb-1 block">操作步骤</label>
+          <textarea id="steps" rows="3" placeholder="1. 打开 App&#10;2. 进入 xxx 页面&#10;3. 点击 xxx 按钮"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm text-slate-600 mb-1 block">期望结果 vs 实际结果</label>
+          <textarea id="result" rows="2" placeholder="期望：xxx&#10;实际：xxx"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <button id="genBtn" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold mb-6">📝 生成 Markdown 报告</button>
+
+    <!-- 输出 -->
+    <section id="outputWrap" class="hidden bg-white rounded-lg border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-slate-800">输出报告</h2>
+        <button id="copyBtn" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm">📋 复制</button>
+      </div>
+      <pre id="output" class="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+    </section>
+
+  </main>
+
+  <script>
+    function detectDevice() {
+      const ua = navigator.userAgent;
+      const w = window.screen.width, h = window.screen.height;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+
+      let os = '未知', osVer = '';
+      if (/iPhone|iPad|iPod/.test(ua)) {
+        os = 'iOS';
+        const m = ua.match(/OS (\d+[_\.]\d+[_\.\d]*)/);
+        if (m) osVer = m[1].replace(/_/g, '.');
+      } else if (/Android/.test(ua)) {
+        os = 'Android';
+        const m = ua.match(/Android (\d+[\.\d]*)/);
+        if (m) osVer = m[1];
+      } else if (/Windows/.test(ua)) {
+        os = 'Windows';
+      } else if (/Mac/.test(ua)) {
+        os = 'macOS';
+      }
+
+      let browser = '其他';
+      if (/MicroMessenger/i.test(ua)) browser = '微信内置';
+      else if (/Edg\//.test(ua)) browser = 'Edge';
+      else if (/Chrome/.test(ua)) browser = 'Chrome';
+      else if (/Firefox/.test(ua)) browser = 'Firefox';
+      else if (/Safari/.test(ua)) browser = 'Safari';
+
+      return {
+        操作系统: `${os} ${osVer}`.trim(),
+        浏览器/容器: browser,
+        屏幕分辨率: `${w} × ${h}`,
+        视口大小: `${vw} × ${vh}`,
+        设备像素比: dpr,
+        物理像素: `${Math.round(w * dpr)} × ${Math.round(h * dpr)}`,
+        系统语言: navigator.language,
+        时区: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        当前时间: new Date().toLocaleString('zh-CN'),
+        网络类型: (navigator.connection && navigator.connection.effectiveType) || '未知',
+        UserAgent: ua,
+      };
+    }
+
+    const auto = detectDevice();
+    document.getElementById('autoTable').innerHTML = Object.entries(auto).map(([k, v]) => `
+      <tr class="border-b border-slate-100">
+        <td class="py-2.5 text-slate-500 w-32 align-top">${k}</td>
+        <td class="py-2.5 text-slate-800 font-mono text-xs break-all">${v}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('genBtn').addEventListener('click', () => {
+      const model = document.getElementById('model').value.trim();
+      const osVersion = document.getElementById('osVersion').value.trim();
+      const appVersion = document.getElementById('appVersion').value.trim();
+      const env = document.getElementById('env').value;
+      const network = document.getElementById('network').value;
+      const repro = document.getElementById('repro').value;
+      const steps = document.getElementById('steps').value.trim();
+      const result = document.getElementById('result').value.trim();
+
+      const md = `## Bug 报告
+
+### 设备信息
+| 项 | 值 |
+|---|---|
+| 设备型号 | ${model || '_(待补充)_'} |
+| 系统版本 | ${osVersion || auto.操作系统} |
+| App 版本 | ${appVersion || '_(待补充)_'} |
+| 环境 | ${env} |
+| 网络 | ${network} |
+| 复现概率 | ${repro} |
+| 屏幕分辨率 | ${auto.屏幕分辨率} (DPR ${auto.设备像素比}) |
+| 浏览器/容器 | ${auto['浏览器/容器']} |
+| 时间 | ${auto.当前时间} |
+
+### 操作步骤
+${steps || '_(待补充)_'}
+
+### 期望 vs 实际
+${result || '_(待补充)_'}
+
+### 技术信息
+- **UA**: \`${auto.UserAgent}\`
+- **视口**: ${auto.视口大小}
+- **时区/语言**: ${auto.时区} / ${auto.系统语言}
+`;
+      document.getElementById('output').textContent = md;
+      document.getElementById('outputWrap').classList.remove('hidden');
+      document.getElementById('outputWrap').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const text = document.getElementById('output').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('copyBtn');
+        const old = btn.textContent;
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => btn.textContent = old, 1500);
+      } catch (e) {
+        alert('复制失败，请手动选中');
+      }
+    });
+  </script>
+</body>
+</html>

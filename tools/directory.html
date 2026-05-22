@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>第三方工具导航 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .cat-btn.active { background-color: #2563eb; color: #fff; border-color: #2563eb; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📚 第三方工具导航</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <div class="mb-6">
+      <input id="searchInput" type="text" placeholder="🔍 搜索工具名称、关键词……"
+        class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+    </div>
+
+    <div id="categoryBar" class="flex flex-wrap gap-2 mb-8"></div>
+
+    <div class="text-sm text-slate-500 mb-4">
+      共 <span id="totalCount" class="font-semibold text-slate-700">0</span> 个工具
+    </div>
+
+    <div id="toolGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="emptyState" class="hidden text-center py-16 text-slate-400">
+      没有匹配的工具，换个关键词试试 🔍
+    </div>
+
+  </main>
+
+  <script src="../data/tools.js"></script>
+  <script>
+    const PLATFORM_COLORS = {
+      'Android': 'bg-green-100 text-green-700',
+      'iOS':     'bg-slate-100 text-slate-700',
+      '通用':    'bg-blue-100 text-blue-700',
+    };
+
+    // 只取第三方（非站内）工具
+    const EXT_TOOLS = TOOLS.filter(t => !t.internal);
+
+    // 只保留有数据的分类
+    const VISIBLE_CATEGORIES = CATEGORIES.filter(c =>
+      c.key === 'all' || EXT_TOOLS.some(t => t.category === c.key)
+    );
+
+    let currentCategory = 'all';
+    let currentKeyword = '';
+
+    function renderCategories() {
+      const bar = document.getElementById('categoryBar');
+      bar.innerHTML = VISIBLE_CATEGORIES.map(c => {
+        const count = c.key === 'all' ? EXT_TOOLS.length : EXT_TOOLS.filter(t => t.category === c.key).length;
+        return `
+          <button data-key="${c.key}"
+            class="cat-btn px-4 py-1.5 rounded-full text-sm border border-slate-200 bg-white text-slate-600 hover:border-blue-400 transition ${c.key === currentCategory ? 'active' : ''}">
+            ${c.name} <span class="opacity-60 text-xs">${count}</span>
+          </button>
+        `;
+      }).join('');
+      bar.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentCategory = btn.dataset.key;
+          renderCategories();
+          renderTools();
+        });
+      });
+    }
+
+    function renderTools() {
+      const grid = document.getElementById('toolGrid');
+      const empty = document.getElementById('emptyState');
+      const kw = currentKeyword.trim().toLowerCase();
+
+      const list = EXT_TOOLS.filter(t => {
+        if (currentCategory !== 'all' && t.category !== currentCategory) return false;
+        if (!kw) return true;
+        const hay = (t.name + ' ' + t.desc + ' ' + (t.tags || []).join(' ')).toLowerCase();
+        return hay.includes(kw);
+      });
+
+      document.getElementById('totalCount').textContent = list.length;
+
+      if (list.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = list.map(t => {
+        const platforms = (t.platforms || []).map(p =>
+          `<span class="text-xs px-2 py-0.5 rounded ${PLATFORM_COLORS[p] || 'bg-slate-100 text-slate-600'}">${p}</span>`
+        ).join('');
+        return `
+          <a href="${t.url}" target="_blank"
+             class="block bg-white rounded-lg border border-slate-200 p-5 hover:border-blue-400 hover:shadow-md transition">
+            <h3 class="font-semibold text-slate-800 mb-2">${t.name}</h3>
+            <p class="text-sm text-slate-600 mb-3 leading-relaxed">${t.desc}</p>
+            <div class="flex flex-wrap gap-1">${platforms}</div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      currentKeyword = e.target.value;
+      renderTools();
+    });
+
+    renderCategories();
+    renderTools();
+  </script>
+</body>
+</html>

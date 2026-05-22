@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>抓包代理二维码 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📡 抓包代理二维码</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-6 py-8">
+
+    <div class="bg-white rounded-lg border border-slate-200 p-6 mb-6">
+      <h2 class="font-semibold text-slate-800 mb-4">代理配置</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">代理 IP（电脑 IP）</label>
+          <div class="flex gap-2">
+            <input id="proxyIp" type="text" placeholder="192.168.1.100"
+              class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            <button id="detectIpBtn" class="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm whitespace-nowrap">自动检测</button>
+          </div>
+          <p id="detectHint" class="text-xs text-slate-400 mt-1">浏览器无法直接拿到本机 IP，请在命令行执行 <code class="bg-slate-100 px-1">ipconfig</code> 查看</p>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">代理端口</label>
+          <input id="proxyPort" type="text" value="8888" placeholder="8888"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          <p class="text-xs text-slate-400 mt-1">Charles 默认 8888 / Fiddler 默认 8888 / Proxyman 默认 9090</p>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="text-sm text-slate-600 mb-1 block">二维码内容类型</label>
+        <div class="flex gap-2 flex-wrap">
+          <button data-type="proxy" class="type-btn active px-4 py-2 rounded-lg text-sm border bg-blue-600 text-white border-blue-600">代理地址（推荐）</button>
+          <button data-type="cert" class="type-btn px-4 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-600">证书下载页</button>
+          <button data-type="custom" class="type-btn px-4 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-600">自定义文本</button>
+        </div>
+      </div>
+
+      <div id="customWrap" class="hidden mb-4">
+        <label class="text-sm text-slate-600 mb-1 block">自定义内容</label>
+        <input id="customText" type="text" placeholder="任意 URL 或文本"
+          class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+      </div>
+
+      <button id="genBtn" class="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">生成二维码</button>
+    </div>
+
+    <div id="qrResult" class="hidden bg-white rounded-lg border border-slate-200 p-6 text-center">
+      <h2 class="font-semibold text-slate-800 mb-4">扫码内容</h2>
+      <div id="qrcode" class="inline-block p-4 bg-white"></div>
+      <p id="qrText" class="text-sm text-slate-600 mt-3 font-mono break-all"></p>
+      <button id="downloadBtn" class="mt-4 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm">下载二维码图片</button>
+    </div>
+
+    <div class="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-5 text-sm text-amber-900">
+      <h3 class="font-semibold mb-2">📱 手机端配置步骤</h3>
+      <div class="space-y-2">
+        <div>
+          <strong>1. 连接同一 WiFi：</strong>电脑和手机必须在同一局域网下
+        </div>
+        <div>
+          <strong>2. 配置代理：</strong>
+          <ul class="ml-5 list-disc mt-1 space-y-1 text-amber-800">
+            <li><strong>Android：</strong>WiFi 详情 → 修改网络 → 高级选项 → 代理"手动" → 填入 IP + 端口</li>
+            <li><strong>iOS：</strong>WiFi 详情 → 配置代理 → 手动 → 填入 IP + 端口</li>
+          </ul>
+        </div>
+        <div>
+          <strong>3. HTTPS 抓包：</strong>访问 <code class="bg-amber-100 px-1">chls.pro/ssl</code>（Charles）或 <code class="bg-amber-100 px-1">mitm.it</code> 下载并安装证书，并在系统设置中"信任根证书"
+        </div>
+        <div>
+          <strong>4. 验证：</strong>手机访问任意网页，Charles/Proxyman 应能看到请求
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentType = 'proxy';
+    let qrInstance = null;
+
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentType = btn.dataset.type;
+        document.querySelectorAll('.type-btn').forEach(b => {
+          b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600', 'active');
+          b.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+        });
+        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600', 'active');
+        btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+        document.getElementById('customWrap').classList.toggle('hidden', currentType !== 'custom');
+      });
+    });
+
+    document.getElementById('detectIpBtn').addEventListener('click', () => {
+      document.getElementById('detectHint').textContent = '请在 PowerShell 执行 ipconfig，查找"IPv4 地址"，通常是 192.168.x.x 或 10.x.x.x';
+      document.getElementById('detectHint').classList.add('text-blue-600');
+    });
+
+    document.getElementById('genBtn').addEventListener('click', () => {
+      const ip = document.getElementById('proxyIp').value.trim();
+      const port = document.getElementById('proxyPort').value.trim();
+      let content = '';
+
+      if (currentType === 'custom') {
+        content = document.getElementById('customText').value.trim();
+        if (!content) { alert('请输入自定义内容'); return; }
+      } else if (currentType === 'cert') {
+        if (!ip) { alert('请填写代理 IP'); return; }
+        content = `http://${ip}${port ? ':' + port : ''}`;
+      } else {
+        if (!ip || !port) { alert('请填写完整 IP 和端口'); return; }
+        content = `http://${ip}:${port}`;
+      }
+
+      const qrBox = document.getElementById('qrcode');
+      qrBox.innerHTML = '';
+      qrInstance = new QRCode(qrBox, {
+        text: content,
+        width: 240,
+        height: 240,
+        correctLevel: QRCode.CorrectLevel.H,
+      });
+      document.getElementById('qrText').textContent = content;
+      document.getElementById('qrResult').classList.remove('hidden');
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const canvas = document.querySelector('#qrcode canvas');
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = 'proxy-qrcode.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  </script>
+</body>
+</html>

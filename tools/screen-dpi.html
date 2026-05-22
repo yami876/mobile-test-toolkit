@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>屏幕分辨率 / DPI 查询 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📐 屏幕分辨率 / DPI 查询</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+
+    <!-- 当前设备 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 mb-6">
+      <h2 class="font-semibold text-slate-800 mb-4">📱 当前设备</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="currentStats"></div>
+      <p class="text-xs text-slate-400 mt-4">💡 横屏/缩放窗口后会自动更新</p>
+    </section>
+
+    <!-- 机型对照表 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-slate-800">📊 主流机型对照表</h2>
+        <input id="modelSearch" type="text" placeholder="🔍 搜索机型"
+          class="px-3 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none text-sm w-48" />
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+              <th class="py-2 px-3">机型</th>
+              <th class="py-2 px-3">物理像素</th>
+              <th class="py-2 px-3">CSS 像素</th>
+              <th class="py-2 px-3">DPR</th>
+              <th class="py-2 px-3">尺寸</th>
+              <th class="py-2 px-3">PPI</th>
+            </tr>
+          </thead>
+          <tbody id="modelTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // 当前设备
+    function refreshCurrent() {
+      const w = window.screen.width, h = window.screen.height;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      const stats = [
+        { label: 'CSS 分辨率', value: `${w} × ${h}`, hint: '屏幕逻辑像素' },
+        { label: '物理像素', value: `${Math.round(w * dpr)} × ${Math.round(h * dpr)}`, hint: 'CSS × DPR' },
+        { label: '视口大小', value: `${vw} × ${vh}`, hint: '当前窗口' },
+        { label: 'DPR', value: dpr, hint: '设备像素比' },
+      ];
+      document.getElementById('currentStats').innerHTML = stats.map(s => `
+        <div class="bg-slate-50 rounded-lg p-4">
+          <div class="text-xs text-slate-500 mb-1">${s.label}</div>
+          <div class="text-lg font-semibold text-slate-800">${s.value}</div>
+          <div class="text-xs text-slate-400 mt-1">${s.hint}</div>
+        </div>
+      `).join('');
+    }
+    refreshCurrent();
+    window.addEventListener('resize', refreshCurrent);
+
+    // 机型库
+    const MODELS = [
+      // iPhone
+      { name: 'iPhone 15 Pro Max',     pw: 1290, ph: 2796, cw: 430, ch: 932,  dpr: 3, size: 6.7, ppi: 460 },
+      { name: 'iPhone 15 Pro',         pw: 1179, ph: 2556, cw: 393, ch: 852,  dpr: 3, size: 6.1, ppi: 460 },
+      { name: 'iPhone 15 / 14',        pw: 1170, ph: 2532, cw: 390, ch: 844,  dpr: 3, size: 6.1, ppi: 460 },
+      { name: 'iPhone 14 Pro Max',     pw: 1290, ph: 2796, cw: 430, ch: 932,  dpr: 3, size: 6.7, ppi: 460 },
+      { name: 'iPhone 13 / 12',        pw: 1170, ph: 2532, cw: 390, ch: 844,  dpr: 3, size: 6.1, ppi: 460 },
+      { name: 'iPhone 13 mini / 12 mini', pw: 1080, ph: 2340, cw: 360, ch: 780, dpr: 3, size: 5.4, ppi: 476 },
+      { name: 'iPhone 11 Pro Max / XS Max', pw: 1242, ph: 2688, cw: 414, ch: 896, dpr: 3, size: 6.5, ppi: 458 },
+      { name: 'iPhone 11 / XR',        pw: 828,  ph: 1792, cw: 414, ch: 896,  dpr: 2, size: 6.1, ppi: 326 },
+      { name: 'iPhone SE 3 / SE 2',    pw: 750,  ph: 1334, cw: 375, ch: 667,  dpr: 2, size: 4.7, ppi: 326 },
+      { name: 'iPhone 8 Plus',         pw: 1080, ph: 1920, cw: 414, ch: 736,  dpr: 3, size: 5.5, ppi: 401 },
+      { name: 'iPhone 8',              pw: 750,  ph: 1334, cw: 375, ch: 667,  dpr: 2, size: 4.7, ppi: 326 },
+
+      // iPad
+      { name: 'iPad Pro 12.9"',        pw: 2048, ph: 2732, cw: 1024, ch: 1366, dpr: 2, size: 12.9, ppi: 264 },
+      { name: 'iPad Pro 11"',          pw: 1668, ph: 2388, cw: 834, ch: 1194, dpr: 2, size: 11.0, ppi: 264 },
+      { name: 'iPad Air',              pw: 1640, ph: 2360, cw: 820, ch: 1180, dpr: 2, size: 10.9, ppi: 264 },
+      { name: 'iPad mini',             pw: 1488, ph: 2266, cw: 744, ch: 1133, dpr: 2, size: 8.3, ppi: 326 },
+
+      // Android 主流
+      { name: 'Samsung Galaxy S24 Ultra', pw: 1440, ph: 3120, cw: 480, ch: 1040, dpr: 3, size: 6.8, ppi: 505 },
+      { name: 'Samsung Galaxy S24',       pw: 1080, ph: 2340, cw: 360, ch: 780,  dpr: 3, size: 6.2, ppi: 416 },
+      { name: 'Samsung Galaxy S23',       pw: 1080, ph: 2340, cw: 360, ch: 780,  dpr: 3, size: 6.1, ppi: 422 },
+      { name: 'Xiaomi 14 Pro',            pw: 1440, ph: 3200, cw: 480, ch: 1066, dpr: 3, size: 6.73, ppi: 522 },
+      { name: 'Xiaomi 14',                pw: 1200, ph: 2670, cw: 400, ch: 890,  dpr: 3, size: 6.36, ppi: 460 },
+      { name: 'Huawei Mate 60 Pro',       pw: 1260, ph: 2720, cw: 420, ch: 906,  dpr: 3, size: 6.82, ppi: 428 },
+      { name: 'Huawei P60 Pro',           pw: 1220, ph: 2700, cw: 406, ch: 900,  dpr: 3, size: 6.67, ppi: 444 },
+      { name: 'OPPO Find X7 Ultra',       pw: 1440, ph: 3168, cw: 480, ch: 1056, dpr: 3, size: 6.82, ppi: 510 },
+      { name: 'Vivo X100 Pro',            pw: 1260, ph: 2800, cw: 420, ch: 933,  dpr: 3, size: 6.78, ppi: 453 },
+      { name: 'Pixel 8 Pro',              pw: 1344, ph: 2992, cw: 448, ch: 998,  dpr: 3, size: 6.7, ppi: 489 },
+      { name: 'Pixel 8',                  pw: 1080, ph: 2400, cw: 412, ch: 915,  dpr: 2.625, size: 6.2, ppi: 428 },
+      { name: 'OnePlus 12',               pw: 1440, ph: 3168, cw: 480, ch: 1056, dpr: 3, size: 6.82, ppi: 510 },
+      { name: 'Honor Magic6 Pro',         pw: 1280, ph: 2800, cw: 426, ch: 933,  dpr: 3, size: 6.8, ppi: 453 },
+    ];
+
+    function renderTable(kw = '') {
+      const tbody = document.getElementById('modelTable');
+      const list = kw ? MODELS.filter(m => m.name.toLowerCase().includes(kw.toLowerCase())) : MODELS;
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">没有匹配的机型</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.map(m => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50">
+          <td class="py-2.5 px-3 font-medium text-slate-800">${m.name}</td>
+          <td class="py-2.5 px-3 text-slate-600 font-mono">${m.pw} × ${m.ph}</td>
+          <td class="py-2.5 px-3 text-slate-600 font-mono">${m.cw} × ${m.ch}</td>
+          <td class="py-2.5 px-3"><span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">@${m.dpr}x</span></td>
+          <td class="py-2.5 px-3 text-slate-600">${m.size}"</td>
+          <td class="py-2.5 px-3 text-slate-600">${m.ppi}</td>
+        </tr>
+      `).join('');
+    }
+    renderTable();
+
+    document.getElementById('modelSearch').addEventListener('input', e => renderTable(e.target.value));
+  </script>
+</body>
+</html>

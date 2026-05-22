@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADB 命令速查 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .cmd { font-family: "Cascadia Code", "Consolas", "Menlo", monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回工具集</a>
+      <h1 class="font-semibold text-slate-700">ADB 命令速查</h1>
+      <span></span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+
+    <div class="mb-6">
+      <input id="searchInput" type="text" placeholder="🔍 搜索命令或说明……"
+        class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+    </div>
+
+    <div id="cmdList" class="space-y-6"></div>
+
+  </main>
+
+  <script>
+    const COMMANDS = [
+      {
+        group: '设备连接',
+        items: [
+          { cmd: 'adb devices', desc: '列出所有已连接设备' },
+          { cmd: 'adb connect <ip:port>', desc: '无线连接设备（需先 adb tcpip 5555）' },
+          { cmd: 'adb tcpip 5555', desc: '让设备开启 5555 端口（USB 连接时执行）' },
+          { cmd: 'adb -s <serial> <command>', desc: '指定某台设备执行命令' },
+          { cmd: 'adb kill-server', desc: '重启 adb 服务（连不上时常用）' },
+          { cmd: 'adb start-server', desc: '启动 adb 服务' },
+        ]
+      },
+      {
+        group: '应用管理',
+        items: [
+          { cmd: 'adb install <apk>', desc: '安装 apk' },
+          { cmd: 'adb install -r <apk>', desc: '保留数据覆盖安装' },
+          { cmd: 'adb install -t <apk>', desc: '允许安装测试包（test-only）' },
+          { cmd: 'adb uninstall <package>', desc: '卸载应用' },
+          { cmd: 'adb shell pm list packages | findstr <关键词>', desc: '查找包名（Windows）' },
+          { cmd: 'adb shell pm clear <package>', desc: '清除应用数据（相当于重置 App）' },
+          { cmd: 'adb shell am start -n <package/.Activity>', desc: '启动指定 Activity' },
+          { cmd: 'adb shell am force-stop <package>', desc: '强制停止应用' },
+          { cmd: 'adb shell dumpsys activity activities | findstr mResumedActivity', desc: '查看当前最顶层 Activity' },
+        ]
+      },
+      {
+        group: '日志与崩溃',
+        items: [
+          { cmd: 'adb logcat', desc: '查看实时日志' },
+          { cmd: 'adb logcat -c', desc: '清空日志缓冲区' },
+          { cmd: 'adb logcat *:E', desc: '只看 Error 及以上级别日志' },
+          { cmd: 'adb logcat -s <tag>', desc: '只看指定 tag 的日志' },
+          { cmd: 'adb logcat > log.txt', desc: '日志保存到文件' },
+          { cmd: 'adb bugreport bugreport.zip', desc: '导出完整系统报告（含崩溃信息）' },
+          { cmd: 'adb shell dumpsys dropbox --print', desc: '查看 dropbox 中的崩溃记录' },
+        ]
+      },
+      {
+        group: '截图录屏',
+        items: [
+          { cmd: 'adb shell screencap -p /sdcard/screen.png', desc: '截屏到设备' },
+          { cmd: 'adb pull /sdcard/screen.png', desc: '把设备文件拉到当前电脑目录' },
+          { cmd: 'adb shell screenrecord /sdcard/demo.mp4', desc: '开始录屏，Ctrl+C 停止' },
+          { cmd: 'adb shell screenrecord --time-limit 30 --size 720x1280 /sdcard/demo.mp4', desc: '录屏 30 秒，指定分辨率' },
+        ]
+      },
+      {
+        group: '文件传输',
+        items: [
+          { cmd: 'adb push <本地> <设备>', desc: '本地文件推送到设备' },
+          { cmd: 'adb pull <设备> <本地>', desc: '设备文件拉取到本地' },
+          { cmd: 'adb shell ls /sdcard/', desc: '查看设备目录' },
+        ]
+      },
+      {
+        group: '性能与设备信息',
+        items: [
+          { cmd: 'adb shell getprop ro.product.model', desc: '查看设备型号' },
+          { cmd: 'adb shell getprop ro.build.version.release', desc: '查看 Android 系统版本' },
+          { cmd: 'adb shell wm size', desc: '查看屏幕分辨率' },
+          { cmd: 'adb shell wm density', desc: '查看屏幕 DPI' },
+          { cmd: 'adb shell dumpsys battery', desc: '查看电池状态' },
+          { cmd: 'adb shell dumpsys meminfo <package>', desc: '查看应用内存占用' },
+          { cmd: 'adb shell top -n 1', desc: '查看 CPU 占用快照' },
+          { cmd: 'adb shell dumpsys gfxinfo <package>', desc: '查看 App 渲染性能（含 FPS 数据）' },
+        ]
+      },
+      {
+        group: '模拟输入',
+        items: [
+          { cmd: 'adb shell input tap <x> <y>', desc: '模拟点击坐标' },
+          { cmd: 'adb shell input swipe <x1> <y1> <x2> <y2> <ms>', desc: '模拟滑动' },
+          { cmd: 'adb shell input text "hello"', desc: '输入文本（不支持中文）' },
+          { cmd: 'adb shell input keyevent <code>', desc: '模拟按键，3=Home / 4=Back / 26=电源' },
+        ]
+      },
+      {
+        group: '网络与代理',
+        items: [
+          { cmd: 'adb shell settings put global http_proxy <ip>:<port>', desc: '设置全局 HTTP 代理（抓包用）' },
+          { cmd: 'adb shell settings put global http_proxy :0', desc: '清除全局代理' },
+          { cmd: 'adb shell ifconfig wlan0', desc: '查看设备 WiFi IP' },
+          { cmd: 'adb reverse tcp:8080 tcp:8080', desc: '把设备 8080 端口反向到电脑（调试本地服务）' },
+        ]
+      },
+    ];
+
+    function render(keyword = '') {
+      const kw = keyword.trim().toLowerCase();
+      const container = document.getElementById('cmdList');
+
+      const groups = COMMANDS.map(g => ({
+        ...g,
+        items: g.items.filter(it =>
+          !kw || it.cmd.toLowerCase().includes(kw) || it.desc.toLowerCase().includes(kw)
+        )
+      })).filter(g => g.items.length > 0);
+
+      if (groups.length === 0) {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400">没有匹配的命令</div>';
+        return;
+      }
+
+      container.innerHTML = groups.map(g => `
+        <section class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <h2 class="px-5 py-3 bg-slate-50 border-b border-slate-200 font-semibold text-slate-700">${g.group}</h2>
+          <ul>
+            ${g.items.map(it => `
+              <li class="px-5 py-3 border-b border-slate-100 last:border-0 flex items-center gap-4 hover:bg-slate-50">
+                <code class="cmd flex-1 text-sm text-slate-800 break-all">${it.cmd}</code>
+                <span class="text-sm text-slate-500 flex-1">${it.desc}</span>
+                <button class="copy-btn text-xs px-3 py-1 rounded bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 shrink-0" data-cmd="${it.cmd.replace(/"/g, '&quot;')}">复制</button>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      `).join('');
+
+      container.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(btn.dataset.cmd);
+            const old = btn.textContent;
+            btn.textContent = '已复制';
+            btn.classList.add('bg-green-100', 'text-green-700');
+            setTimeout(() => {
+              btn.textContent = old;
+              btn.classList.remove('bg-green-100', 'text-green-700');
+            }, 1200);
+          } catch (e) {
+            alert('复制失败，请手动选中复制');
+          }
+        });
+      });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', e => render(e.target.value));
+    render();
+  </script>
+</body>
+</html>
