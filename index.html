@@ -7,108 +7,1095 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .cat-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .method-steps, .note-text, .api-detail-text { white-space: pre-wrap; word-break: break-word; }
+    .steps-editor { min-height: 180px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+    .steps-editor:empty::before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
+    .steps-editor img, .method-steps img { max-width: 320px; max-height: 240px; width: auto; height: auto; border: 1px solid #e2e8f0; border-radius: 4px; margin: 6px 0; display: inline-block; object-fit: contain; vertical-align: middle; }
+    .method-steps img { cursor: zoom-in; }
+    .method-steps img:hover { border-color: #3b82f6; }
+    .method-badge-GET    { background:#dcfce7; color:#15803d; }
+    .method-badge-POST   { background:#dbeafe; color:#1d4ed8; }
+    .method-badge-PUT    { background:#fef3c7; color:#a16207; }
+    .method-badge-DELETE { background:#fee2e2; color:#b91c1c; }
+    .method-badge-PATCH  { background:#ede9fe; color:#6d28d9; }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-  <!-- 顶栏 -->
   <header class="bg-white border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-800">📱 移动端测试工具集</h1>
-        <p class="text-sm text-slate-500 mt-1">为移动端测试同学打造的在线小工具 + 第三方工具导航</p>
+        <p class="text-sm text-slate-500 mt-1">业务平台 · 测试方法 · 接口清单 · 测试工具</p>
       </div>
       <a href="https://github.com" target="_blank" class="text-sm text-slate-500 hover:text-blue-600">GitHub →</a>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-6 py-10">
+  <main class="max-w-6xl mx-auto px-6 py-8">
 
-    <!-- 主区：站内小工具 -->
-    <section class="mb-12">
-      <div class="flex items-end justify-between mb-1">
-        <h2 class="text-xl font-bold text-slate-800">🛠 在线小工具</h2>
-        <span class="text-sm text-slate-400">共 <span id="miniCount">0</span> 个</span>
+    <!-- Tab 切换 -->
+    <div class="border-b border-slate-200 mb-6">
+      <div class="flex items-center gap-1 overflow-x-auto">
+        <button data-tab="portals" class="tab-btn active px-5 py-3 text-base font-semibold text-slate-500 border-b-2 border-transparent hover:text-blue-600 transition whitespace-nowrap">
+          🏢 业务平台 <span class="ml-1 text-xs opacity-75">(<span id="portalsCount">0</span>)</span>
+        </button>
+        <button data-tab="methods" class="tab-btn px-5 py-3 text-base font-semibold text-slate-500 border-b-2 border-transparent hover:text-blue-600 transition whitespace-nowrap">
+          📚 测试方法 <span class="ml-1 text-xs opacity-75">(<span id="methodsCount">0</span>)</span>
+        </button>
+        <button data-tab="apis" class="tab-btn px-5 py-3 text-base font-semibold text-slate-500 border-b-2 border-transparent hover:text-blue-600 transition whitespace-nowrap">
+          🔌 接口 <span class="ml-1 text-xs opacity-75">(<span id="apisCount">0</span>)</span>
+        </button>
+        <button data-tab="tools" class="tab-btn px-5 py-3 text-base font-semibold text-slate-500 border-b-2 border-transparent hover:text-blue-600 transition whitespace-nowrap">
+          🛠 测试工具 <span class="ml-1 text-xs opacity-75">(<span id="toolsCount">0</span>)</span>
+        </button>
       </div>
-      <p class="text-sm text-slate-500 mb-5">不用装、不用配，浏览器打开就能用</p>
+    </div>
 
-      <div id="miniGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-      <div id="miniEmpty" class="hidden bg-white border border-dashed border-slate-300 rounded-lg p-10 text-center text-slate-400">
-        还没有在线小工具，去 <code class="bg-slate-100 px-1.5 py-0.5 rounded">data/tools.js</code> 添加一个吧
+    <!-- ========== Tab 1: 业务平台 ========== -->
+    <section id="tabPortals" class="tab-pane">
+      <div class="flex items-center justify-between mb-5">
+        <p class="text-sm text-slate-500">公司常用业务平台快捷入口，支持多环境切换 + 账号备注</p>
+        <a href="tools/team-portals.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">+ 添加 / 管理</a>
+      </div>
+      <div id="portalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      <div id="portalsEmpty" class="hidden bg-white border border-dashed border-slate-300 rounded-lg p-10 text-center text-slate-400">
+        还没有平台入口，点右上角 <strong class="text-blue-600">+ 添加 / 管理</strong> 加一个
       </div>
     </section>
 
-    <!-- 第三方工具导航入口 -->
-    <section class="mb-6">
-      <a href="tools/directory.html"
-         class="block bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl p-6 text-white shadow-sm hover:shadow-md transition">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="flex items-center gap-3 mb-1">
-              <span class="text-2xl">📚</span>
-              <h2 class="text-xl font-bold">第三方工具导航</h2>
-            </div>
-            <p class="text-blue-100 text-sm">
-              收录 <span id="extCount" class="font-semibold">0</span> 个常用工具，覆盖
-              <span id="extCats">性能监测 / 日志崩溃 / 截图录屏 / 抓包 / UI 调试 / 自动化</span>
-            </p>
+    <!-- ========== Tab 2: 测试方法 ========== -->
+    <section id="tabMethods" class="tab-pane hidden">
+      <p class="text-sm text-slate-500 mb-4">收集项目和公共模块的测试方法、要点、步骤</p>
+      <div class="mb-4">
+        <input id="methodSearch" type="text" placeholder="🔍 搜索功能模块 / 说明 / 步骤 / 标签..."
+          class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+      </div>
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-xs text-slate-500">分类:</span>
+        <div id="categoryBar" class="flex flex-wrap gap-1.5"></div>
+        <button id="addCategoryBtn" class="ml-auto text-xs px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded">+ 新增分类</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-5">
+        <button id="addMethodBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">+ 添加方法</button>
+        <button id="importMethodsBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬆ 导入 JSON</button>
+        <button id="exportMethodsBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬇ 导出 JSON</button>
+        <button id="resetMethodsBtn" class="ml-auto px-4 py-2 text-red-600 hover:text-red-700 text-sm">恢复默认</button>
+        <input id="importMethodsFile" type="file" accept=".json" class="hidden" />
+      </div>
+      <div id="methodsContainer"></div>
+      <div id="methodsEmpty" class="hidden bg-white border border-dashed border-slate-300 rounded-lg p-10 text-center text-slate-400">
+        没有匹配的测试方法，换个关键词或者点 <strong class="text-blue-600">+ 添加方法</strong>
+      </div>
+    </section>
+
+    <!-- ========== Tab 3: 接口清单 ========== -->
+    <section id="tabApis" class="tab-pane hidden">
+      <p class="text-sm text-slate-500 mb-4">记录团队常用接口，按环境切换 URL，点击复制即可使用</p>
+      <div class="flex flex-wrap gap-3 mb-4">
+        <input id="apiSearch" type="text" placeholder="🔍 搜索接口名 / 路径 / 说明 / 标签..."
+          class="flex-1 min-w-[200px] px-4 py-2.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        <select id="apiEnvSelect" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none bg-white"></select>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-xs text-slate-500">分类:</span>
+        <div id="apiCategoryBar" class="flex flex-wrap gap-1.5"></div>
+        <button id="addApiCategoryBtn" class="ml-auto text-xs px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded">+ 新增分类</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-5">
+        <button id="addApiBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">+ 添加接口</button>
+        <button id="importApisBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬆ 导入 JSON</button>
+        <button id="exportApisBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm">⬇ 导出 JSON</button>
+        <button id="resetApisBtn" class="ml-auto px-4 py-2 text-red-600 hover:text-red-700 text-sm">恢复默认</button>
+        <input id="importApisFile" type="file" accept=".json" class="hidden" />
+      </div>
+      <div id="apisContainer"></div>
+      <div id="apisEmpty" class="hidden bg-white border border-dashed border-slate-300 rounded-lg p-10 text-center text-slate-400">
+        没有匹配的接口，换个关键词或者点 <strong class="text-blue-600">+ 添加接口</strong>
+      </div>
+      <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-900">
+        💡 数据保存在浏览器本地，分享给同事请用导入/导出 JSON。当前仅作清单记录，<strong>不会发起真实请求</strong>。
+      </div>
+    </section>
+
+    <!-- ========== Tab 4: 测试工具 ========== -->
+    <section id="tabTools" class="tab-pane hidden">
+      <p class="text-sm text-slate-500 mb-5">本地脚本 + 网页工具，常用测试功能一站搞定</p>
+
+      <div class="mb-8">
+        <h3 class="text-base font-semibold text-slate-700 mb-3 flex flex-wrap items-baseline gap-2">
+          <span>📜 测试脚本库</span>
+          <span class="text-xs text-slate-400 font-normal">(<span id="scriptToolsCount">0</span>) · 本地 .bat / .ps1 脚本，支持复制 / 下载</span>
+        </h3>
+        <div id="scriptToolsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <div class="mb-8">
+        <h3 class="text-base font-semibold text-slate-700 mb-3 flex flex-wrap items-baseline gap-2">
+          <span>🛠 在线工具</span>
+          <span class="text-xs text-slate-400 font-normal">(<span id="webToolsCount">0</span>) · 浏览器打开即用</span>
+        </h3>
+        <div id="webToolsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <div>
+        <h3 class="text-base font-semibold text-slate-700 mb-3 flex flex-wrap items-baseline gap-2">
+          <span>📚 第三方工具</span>
+          <span class="text-xs text-slate-400 font-normal">(<span id="extCount">0</span>) · 行业常用工具按分类索引</span>
+        </h3>
+        <a href="tools/directory.html"
+           class="block bg-white rounded-lg border border-slate-200 p-4 hover:border-blue-400 hover:shadow-sm transition">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-slate-600">性能监测 / 日志崩溃 / 截图录屏 / 抓包 / UI 调试 / 自动化</p>
+            <span class="text-slate-400 text-lg">→</span>
           </div>
-          <span class="text-3xl opacity-80">→</span>
-        </div>
-      </a>
+        </a>
+      </div>
     </section>
 
   </main>
 
   <footer class="max-w-6xl mx-auto px-6 py-8 text-center text-sm text-slate-400">
-    想加新工具？编辑 <code class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">data/tools.js</code> 即可
+    数据保存在浏览器本地，团队共享请用导入/导出 JSON
   </footer>
+
+  <!-- ========== 图片放大查看 Lightbox ========== -->
+  <div id="imgLightbox" class="hidden fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 cursor-zoom-out">
+    <img id="imgLightboxImg" class="max-w-full max-h-full object-contain" alt="" />
+    <button class="absolute top-4 right-4 text-white text-3xl leading-none w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded">✕</button>
+  </div>
+
+  <!-- ========== 模态框: 业务平台多环境选择（含 note）========== -->
+  <div id="envPicker" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-40">
+    <div class="bg-white rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+        <h2 class="font-semibold text-slate-800" id="pickerTitle">选择环境</h2>
+        <button id="pickerClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div id="pickerList" class="p-3 space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- ========== 模态框: 添加/编辑 测试方法 ========== -->
+  <div id="methodModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h2 id="methodModalTitle" class="text-lg font-semibold text-slate-800">添加测试方法</h2>
+        <button id="methodModalClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">功能模块 <span class="text-red-500">*</span></label>
+          <input id="fMethodModule" type="text" placeholder="如：登录功能 / 二维码扫描 / 蓝牙连接"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">所属分类 <span class="text-red-500">*</span></label>
+          <select id="fMethodCategory" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">一句话说明</label>
+          <input id="fMethodDesc" type="text" placeholder="简短说明这个功能的测试要点（可选）"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-sm text-slate-600">测试步骤 <span class="text-red-500">*</span></label>
+            <button type="button" id="fMethodInsertImage" class="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">📷 插入图片</button>
+          </div>
+          <div id="fMethodSteps" contenteditable="true" data-placeholder="每行一条步骤；支持 Ctrl+V 直接粘贴截图"
+            class="steps-editor w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none font-mono text-sm"></div>
+          <p class="text-xs text-slate-400 mt-1">💡 直接粘贴 / 选择图片即可显示预览，支持 Ctrl+Z 撤销</p>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">标签</label>
+          <input id="fMethodTags" type="text" placeholder="用逗号分隔，如：登录, 安全, 边界"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+      </div>
+      <div class="p-6 border-t border-slate-200 flex justify-end gap-2">
+        <button id="methodCancelBtn" class="px-4 py-2 text-slate-600 hover:text-slate-800">取消</button>
+        <button id="methodSaveBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 模态框: 管理测试方法分类 ========== -->
+  <div id="categoryModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg max-w-md w-full">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-800">管理分类</h2>
+        <button id="categoryModalClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div class="p-6 space-y-3">
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">新分类名</label>
+          <div class="flex gap-2">
+            <input id="newCategoryName" type="text" placeholder="如：激光雕刻项目"
+              class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+            <button id="newCategoryAdd" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">添加</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">现有分类</label>
+          <div id="categoryList" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 模态框: 添加/编辑 接口 ========== -->
+  <div id="apiModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+        <h2 id="apiModalTitle" class="text-lg font-semibold text-slate-800">添加接口</h2>
+        <button id="apiModalClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="grid grid-cols-[100px_1fr] gap-3">
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">Method <span class="text-red-500">*</span></label>
+            <select id="fApiMethod" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none">
+              <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-slate-600 mb-1 block">接口名 <span class="text-red-500">*</span></label>
+            <input id="fApiName" type="text" placeholder="如：获取用户信息"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">所属分类 <span class="text-red-500">*</span></label>
+          <select id="fApiCategory" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">一句话说明</label>
+          <input id="fApiDesc" type="text" placeholder="简短描述接口用途（可选）"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">环境 URL <span class="text-red-500">*</span></label>
+          <div id="apiPathsList" class="space-y-2"></div>
+          <button id="addApiPathBtn" type="button" class="mt-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded text-sm text-slate-700">+ 添加环境</button>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">参数说明</label>
+          <textarea id="fApiParams" rows="3" placeholder="如：&#10;query: page=1&size=20&#10;body: {&quot;name&quot;: &quot;...&quot;}"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none font-mono text-sm"></textarea>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">Headers</label>
+          <textarea id="fApiHeaders" rows="2" placeholder="如：Authorization: Bearer xxx&#10;Content-Type: application/json"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none font-mono text-sm"></textarea>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">响应示例</label>
+          <textarea id="fApiResponse" rows="4" placeholder='{"code": 0, "data": {...}}'
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none font-mono text-sm"></textarea>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">标签</label>
+          <input id="fApiTags" type="text" placeholder="用逗号分隔，如：用户, 鉴权"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+        </div>
+      </div>
+      <div class="p-6 border-t border-slate-200 flex justify-end gap-2 sticky bottom-0 bg-white">
+        <button id="apiCancelBtn" class="px-4 py-2 text-slate-600 hover:text-slate-800">取消</button>
+        <button id="apiSaveBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 模态框: 管理接口分类 ========== -->
+  <div id="apiCategoryModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg max-w-md w-full">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-800">管理接口分类</h2>
+        <button id="apiCategoryModalClose" class="text-slate-400 hover:text-slate-600 text-xl leading-none">✕</button>
+      </div>
+      <div class="p-6 space-y-3">
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">新分类名</label>
+          <div class="flex gap-2">
+            <input id="newApiCategoryName" type="text" placeholder="如：用户中心"
+              class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none" />
+            <button id="newApiCategoryAdd" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">添加</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600 mb-1 block">现有分类</label>
+          <div id="apiCategoryList" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="data/tools.js"></script>
   <script>
-    const PLATFORM_COLORS = {
-      'Android': 'bg-green-100 text-green-700',
-      'iOS':     'bg-slate-100 text-slate-700',
-      '通用':    'bg-blue-100 text-blue-700',
-    };
+    // ============================================================ 公共
+    const PLATFORM_COLORS = { 'Android': 'bg-green-100 text-green-700', 'iOS': 'bg-slate-100 text-slate-700', '通用': 'bg-blue-100 text-blue-700' };
+    function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function newId(prefix) { return (prefix || 'id') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
 
-    // 渲染站内小工具
-    const miniTools = TOOLS.filter(t => t.internal);
-    document.getElementById('miniCount').textContent = miniTools.length;
-
-    const miniGrid = document.getElementById('miniGrid');
-    const miniEmpty = document.getElementById('miniEmpty');
-
-    if (miniTools.length === 0) {
-      miniEmpty.classList.remove('hidden');
-    } else {
-      miniGrid.innerHTML = miniTools.map(t => {
-        const platforms = (t.platforms || []).map(p =>
-          `<span class="text-xs px-2 py-0.5 rounded ${PLATFORM_COLORS[p] || 'bg-slate-100 text-slate-600'}">${p}</span>`
-        ).join('');
-        return `
-          <a href="${t.url}"
-             class="group block bg-white rounded-xl border border-slate-200 p-6 hover:border-blue-500 hover:shadow-lg transition">
-            <div class="flex items-start gap-3 mb-3">
-              <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-100">
-                ${t.icon || '🧩'}
-              </div>
-              <div class="flex-1">
-                <h3 class="font-semibold text-slate-800 mb-1 group-hover:text-blue-600">${t.name}</h3>
-                <div class="flex flex-wrap gap-1">${platforms}</div>
-              </div>
-              <span class="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition">→</span>
-            </div>
-            <p class="text-sm text-slate-600 leading-relaxed">${t.desc}</p>
-          </a>
-        `;
-      }).join('');
+    // 兼容新旧数据：旧的是纯文本（含 markdown 图片标记），新的是 HTML（contenteditable 输出）
+    function ensureStepsHtml(steps) {
+      if (!steps) return '';
+      // 含 HTML 标签 → 直接渲染
+      if (/<(img|br|p|div|span|a)\b/i.test(steps)) return steps;
+      // 旧的纯文本 → 转 HTML（图片标记 + 换行）
+      return escapeHtml(steps)
+        .replace(/!\[([^\]]*)\]\(((?:data:image\/[^)]+)|(?:https?:\/\/[^)]+))\)/g, (m, alt, url) => `<img src="${url}" alt="${alt}" />`)
+        .replace(/\n/g, '<br>');
     }
 
-    // 第三方工具入口的统计
-    const extTools = TOOLS.filter(t => !t.internal);
-    document.getElementById('extCount').textContent = extTools.length;
+    // 压缩图片：默认 1200px 宽 + JPEG 85%（放大查看更清晰；卡片缩略图仍 320 限宽）
+    function compressImageFile(file, maxWidth = 1200, quality = 0.85) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let { width, height } = img;
+            if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 在指定 textarea 当前光标位置插入图片 markdown
+    function insertImageToTextarea(textareaId, dataUrl) {
+      const ta = document.getElementById(textareaId);
+      const pos = ta.selectionStart || 0;
+      const text = ta.value;
+      const insert = `\n![图片](${dataUrl})\n`;
+      ta.value = text.slice(0, pos) + insert + text.slice(pos);
+      ta.selectionStart = ta.selectionEnd = pos + insert.length;
+      ta.focus();
+    }
+    async function copyText(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+        if (btn) { const old = btn.textContent; btn.textContent = '✓ 已复制'; setTimeout(() => btn.textContent = old, 1200); }
+      } catch (e) { alert('复制失败'); }
+    }
+
+    // Lightbox：点击关闭
+    document.getElementById('imgLightbox').addEventListener('click', () => {
+      document.getElementById('imgLightbox').classList.add('hidden');
+    });
+
+    // Tab 切换
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const t = btn.dataset.tab;
+        ['portals', 'methods', 'apis', 'tools'].forEach(name => {
+          document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.toggle('hidden', t !== name);
+        });
+      });
+    });
+
+    // ============================================================ Tab 1: 业务平台
+    const PORTAL_STORAGE_KEY = 'mtt-portals-v1';
+    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v4';
+    const DEFAULT_PORTALS = {
+      version: 1,
+      portals: [
+        { id: 'ctc', icon: '📋', name: 'CTC', desc: '测试用例管理平台',
+          envs: [{ name: '生产', url: 'https://ctc-next.makeblock.com/#/workplace', note: '' }] },
+        { id: 'aimind', icon: '🤖', name: 'AI 用例平台', desc: 'AI 辅助生成测试用例',
+          envs: [{ name: '生产', url: 'https://aimind.makeblock.com/login', note: '' }] },
+        { id: 'c10s', icon: '🏪', name: 'C10S 企业版商家后台', desc: '定制商家管理后台，支持 web 端和 Pad 端登录',
+          envs: [
+            { name: '国服测试', url: 'https://customthings-test.makeblock.com/v2/login/enterprise',
+              note: 'web登录账号1：admin@yamitest / 123456\n账号1 Pad店铺1：yami1@yamitest / 123456\nweb登录账号2：admin@public / 123456' },
+            { name: '美服测试', url: 'https://test-us.customthings.com/v2/login/enterprise',
+              note: 'web登录账号1：admin@yamitest / 123456\n账号1 Pad店铺1：yami1@yamitest / 123456\n账号1 Pad店铺2：yami2@yamitest / 123456' },
+            { name: '美服测试-定制账号', url: 'https://test-us.customthings.com/v2/login/enterprise',
+              note: '升级包：customthings-android-glo\n\nweb登录账号1：admin@customize / 123456\n账号1 Pad店铺1：pad1@customize / 123456\n账号1 Pad店铺2：pad2@customize / 123456' },
+            { name: '国服正式', url: 'https://customthings.cn',
+              note: 'web登录账号：admin@001 / 123456\nPad店铺1：001@001 / 123456' },
+            { name: '美服生产', url: 'https://customthings.com/v2/login/enterprise',
+              note: 'web登录账号1：admin@padtest / 123456（绑定 yami.wu@makeblock.com）\n账号1 Pad店铺1：pad1@padtest / 123456\n账号1 Pad店铺2：pad2@padtest / 123456' }
+          ]
+        },
+        { id: 'cms', icon: '🛠', name: 'CMS 管理后台', desc: 'XCS 内容管理系统后台',
+          envs: [
+            { name: '国服开发', url: 'https://dev-web.makeblock.com/xcs-cms/index.html', note: '账号：yami.wu@makeblock.com / 123456' },
+            { name: '国服测试', url: 'https://test-web.makeblock.com/xcs-cms/index.html', note: '账号：yami.wu@makeblock.com / 123456' },
+            { name: '美服测试', url: 'https://test-web.xtool.com/xcs-cms/index.html', note: '账号：yami.wu@makeblock.com / 123456' },
+            { name: '国服生产', url: 'https://cms-admin.makextool.com/#/', note: '账号：yami.wu@makeblock.com / 123456' },
+            { name: '美服生产', url: 'https://cms-admin.xtool.com/', note: '账号：yami.wu@makeblock.com / wym123456' }
+          ]
+        },
+        { id: 'devops', icon: '⚙️', name: '效能平台', desc: '软件/固件升级',
+          envs: [
+            { name: '国服/美服生产', url: 'https://devops.makeblock.com/efficacy/#/storage/oss-config', note: '' },
+            { name: '国服/美服测试', url: 'https://devops-test.makeblock.com/efficacy/#/resource/package-version', note: '账号：yami.wu@makeblock.com / 123456' }
+          ]
+        },
+        { id: 'xs-admin', icon: '📱', name: 'XS 移动端管理后台', desc: '站内支持切环境',
+          envs: [
+            { name: '默认', url: 'https://web.makeblock.com/site/admin_xts/index.html', note: '账号：yami.wu@makeblock.com / 123456' }
+          ]
+        }
+      ]
+    };
+    function loadPortals() {
+      try {
+        const raw = localStorage.getItem(PORTAL_STORAGE_KEY);
+        if (!raw) {
+          localStorage.setItem(PORTAL_MIGRATION_KEY, '1');
+          return JSON.parse(JSON.stringify(DEFAULT_PORTALS));
+        }
+        const d = JSON.parse(raw);
+        (d.portals || []).forEach(p => (p.envs || []).forEach(e => { if (typeof e.note !== 'string') e.note = ''; }));
+        // 一次性自动迁移：追加 DEFAULT_PORTALS 中尚未存在的官方平台
+        if (!localStorage.getItem(PORTAL_MIGRATION_KEY)) {
+          const existingIds = new Set(d.portals.map(p => p.id));
+          let added = 0;
+          DEFAULT_PORTALS.portals.forEach(p => {
+            if (!existingIds.has(p.id)) {
+              d.portals.push(JSON.parse(JSON.stringify(p)));
+              added++;
+            }
+          });
+          if (added > 0) localStorage.setItem(PORTAL_STORAGE_KEY, JSON.stringify(d));
+          localStorage.setItem(PORTAL_MIGRATION_KEY, '1');
+        }
+        return d;
+      } catch (e) { return JSON.parse(JSON.stringify(DEFAULT_PORTALS)); }
+    }
+    function renderPortals() {
+      const data = loadPortals();
+      document.getElementById('portalsCount').textContent = data.portals.length;
+      const grid = document.getElementById('portalsGrid');
+      const empty = document.getElementById('portalsEmpty');
+      if (data.portals.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      grid.innerHTML = data.portals.map(p => {
+        const isMulti = p.envs.length > 1;
+        const hasNote = !isMulti && p.envs[0] && p.envs[0].note && p.envs[0].note.trim();
+        const action = isMulti
+          ? `<button data-id="${p.id}" data-action="pick" class="portal-btn flex-1 px-3 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 text-sm font-medium">选择环境（${p.envs.length}）→</button>`
+          : `<button data-id="${p.id}" data-action="open" class="portal-btn flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">打开 →</button>`;
+        const noteBtn = hasNote
+          ? `<button data-id="${p.id}" data-action="toggleNote" class="portal-btn px-3 py-2 bg-amber-50 text-amber-700 rounded hover:bg-amber-100 text-sm" title="账号备注">📝</button>` : '';
+        return `
+          <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition">
+            <div class="flex items-start gap-3 mb-4">
+              <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-xl shrink-0">${p.icon || '🔗'}</div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-slate-800 truncate">${escapeHtml(p.name)}</h3>
+                ${p.desc ? `<p class="text-xs text-slate-500 mt-0.5 truncate">${escapeHtml(p.desc)}</p>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">${action}${noteBtn}</div>
+            ${hasNote ? `<div class="note-panel hidden mt-3 p-3 bg-slate-50 rounded-lg text-xs note-text text-slate-700 font-mono">${escapeHtml(p.envs[0].note)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+      grid.querySelectorAll('.portal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const portal = data.portals.find(x => x.id === btn.dataset.id);
+          if (!portal) return;
+          if (btn.dataset.action === 'open') window.open(portal.envs[0].url, '_blank');
+          else if (btn.dataset.action === 'pick') showEnvPicker(portal);
+          else if (btn.dataset.action === 'toggleNote') {
+            const card = btn.closest('.bg-white');
+            card.querySelector('.note-panel')?.classList.toggle('hidden');
+          }
+        });
+      });
+    }
+    function showEnvPicker(portal) {
+      const picker = document.getElementById('envPicker');
+      document.getElementById('pickerTitle').textContent = `${portal.icon || '🔗'}  ${portal.name}`;
+      document.getElementById('pickerList').innerHTML = portal.envs.map((e, i) => `
+        <div class="border border-slate-200 rounded-lg overflow-hidden">
+          <div class="flex items-center gap-2 p-3 hover:bg-blue-50 transition">
+            <div class="flex-1 min-w-0 cursor-pointer pick-row" data-idx="${i}">
+              <div class="font-medium text-slate-800">${escapeHtml(e.name)}</div>
+              <div class="text-xs text-slate-500 font-mono truncate">${escapeHtml(e.url)}</div>
+            </div>
+            ${e.note && e.note.trim() ? `<button class="pick-note-toggle px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded hover:bg-amber-100 shrink-0" data-idx="${i}">📝 备注</button>` : ''}
+            <button class="pick-open-btn px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 shrink-0" data-idx="${i}">打开 →</button>
+          </div>
+          ${e.note && e.note.trim() ? `
+            <div class="pick-note-panel hidden bg-slate-50 px-3 py-2 border-t border-slate-200">
+              <div class="text-xs note-text text-slate-700 font-mono">${escapeHtml(e.note)}</div>
+              <button class="pick-copy-note mt-2 text-xs px-2 py-1 bg-white border border-slate-200 rounded hover:bg-slate-100" data-idx="${i}">📋 复制备注</button>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+      picker.classList.remove('hidden');
+      document.querySelectorAll('.pick-open-btn').forEach(btn => btn.addEventListener('click', () => window.open(portal.envs[Number(btn.dataset.idx)].url, '_blank')));
+      document.querySelectorAll('.pick-row').forEach(row => row.addEventListener('click', () => window.open(portal.envs[Number(row.dataset.idx)].url, '_blank')));
+      document.querySelectorAll('.pick-note-toggle').forEach(btn => btn.addEventListener('click', () => btn.closest('.border').querySelector('.pick-note-panel').classList.toggle('hidden')));
+      document.querySelectorAll('.pick-copy-note').forEach(btn => btn.addEventListener('click', () => copyText(portal.envs[Number(btn.dataset.idx)].note, btn)));
+    }
+    document.getElementById('pickerClose').onclick = () => document.getElementById('envPicker').classList.add('hidden');
+    document.getElementById('envPicker').addEventListener('click', e => { if (e.target.id === 'envPicker') e.target.classList.add('hidden'); });
+    renderPortals();
+
+    // ============================================================ Tab 2: 测试方法
+    const METHODS_STORAGE_KEY = 'mtt-methods-v1';
+    const DEFAULT_METHODS = { version: 1, categories: [{ id: 'common', name: '公共模块' }], methods: [
+      { id: 'demo-1', categoryId: 'common', module: '示例：登录功能', desc: '账号密码登录的核心测试场景',
+        steps: '1. 正确账号 + 正确密码 → 登录成功，跳到主页\n2. 正确账号 + 错误密码 → 提示密码错误\n3. 不存在的账号 → 提示账号不存在\n4. 空账号或空密码 → 按钮置灰\n5. 连续错误 5 次 → 锁定 / 验证码\n6. 退出登录 → 清除本地 token', tags: ['登录', '安全', '示例'] }
+    ]};
+    let methodsData;
+    let currentCategoryFilter = 'all';
+    let currentSearchKeyword = '';
+    function loadMethods() {
+      try { const raw = localStorage.getItem(METHODS_STORAGE_KEY); return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_METHODS)); }
+      catch (e) { return JSON.parse(JSON.stringify(DEFAULT_METHODS)); }
+    }
+    methodsData = loadMethods();
+    function saveMethods() { localStorage.setItem(METHODS_STORAGE_KEY, JSON.stringify(methodsData)); }
+    if (!localStorage.getItem(METHODS_STORAGE_KEY)) saveMethods();
+
+    function renderCategoryBar() {
+      const bar = document.getElementById('categoryBar');
+      const all = `<button data-cat="all" class="cat-btn ${currentCategoryFilter==='all'?'active':''} px-3 py-1 rounded-full text-xs border border-slate-200 bg-white text-slate-600 hover:border-blue-400 transition">全部 (${methodsData.methods.length})</button>`;
+      const cats = methodsData.categories.map(c => {
+        const count = methodsData.methods.filter(m => m.categoryId === c.id).length;
+        return `<button data-cat="${c.id}" class="cat-btn ${currentCategoryFilter===c.id?'active':''} px-3 py-1 rounded-full text-xs border border-slate-200 bg-white text-slate-600 hover:border-blue-400 transition">${escapeHtml(c.name)} (${count})</button>`;
+      }).join('');
+      bar.innerHTML = all + cats;
+      bar.querySelectorAll('.cat-btn').forEach(btn => btn.addEventListener('click', () => { currentCategoryFilter = btn.dataset.cat; renderCategoryBar(); renderMethods(); }));
+    }
+    function renderMethods() {
+      document.getElementById('methodsCount').textContent = methodsData.methods.length;
+      const kw = currentSearchKeyword.trim().toLowerCase();
+      let list = methodsData.methods.filter(m => {
+        if (currentCategoryFilter !== 'all' && m.categoryId !== currentCategoryFilter) return false;
+        if (!kw) return true;
+        const hay = (m.module + ' ' + (m.desc||'') + ' ' + (m.steps||'') + ' ' + (m.tags||[]).join(' ')).toLowerCase();
+        return hay.includes(kw);
+      });
+      const container = document.getElementById('methodsContainer');
+      const empty = document.getElementById('methodsEmpty');
+      if (list.length === 0) { container.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      const grouped = {};
+      list.forEach(m => { if (!grouped[m.categoryId]) grouped[m.categoryId] = []; grouped[m.categoryId].push(m); });
+      container.innerHTML = methodsData.categories.filter(c => grouped[c.id]).map(c => {
+        const cards = grouped[c.id].map(m => methodCard(m)).join('');
+        return `<section class="mb-6"><h3 class="text-sm font-semibold text-slate-600 mb-3">📦 ${escapeHtml(c.name)} <span class="text-slate-400 ml-1">(${grouped[c.id].length})</span></h3><div class="space-y-3">${cards}</div></section>`;
+      }).join('');
+      container.querySelectorAll('.method-toggle').forEach(btn => btn.addEventListener('click', () => {
+        const card = btn.closest('.method-card');
+        const detail = card.querySelector('.method-detail');
+        const isOpen = !detail.classList.contains('hidden');
+        detail.classList.toggle('hidden');
+        btn.textContent = isOpen ? '▼ 展开步骤' : '▲ 收起';
+      }));
+      container.querySelectorAll('.method-steps img').forEach(img => {
+        img.addEventListener('click', () => {
+          document.getElementById('imgLightboxImg').src = img.src;
+          document.getElementById('imgLightbox').classList.remove('hidden');
+        });
+      });
+      container.querySelectorAll('.method-edit').forEach(btn => btn.addEventListener('click', () => openMethodModal(btn.dataset.id)));
+      container.querySelectorAll('.method-del').forEach(btn => btn.addEventListener('click', () => {
+        const m = methodsData.methods.find(x => x.id === btn.dataset.id);
+        if (m && confirm(`确定删除「${m.module}」吗？`)) {
+          methodsData.methods = methodsData.methods.filter(x => x.id !== btn.dataset.id);
+          saveMethods(); renderCategoryBar(); renderMethods();
+        }
+      }));
+    }
+    function methodCard(m) {
+      const tags = (m.tags || []).map(t => `<span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">${escapeHtml(t)}</span>`).join('');
+      return `
+        <div class="method-card bg-white rounded-lg border border-slate-200 p-5 hover:shadow-sm transition">
+          <div class="flex items-start justify-between mb-2 gap-2">
+            <div class="flex-1 min-w-0">
+              <h4 class="font-semibold text-slate-800">📌 ${escapeHtml(m.module)}</h4>
+              ${m.desc ? `<p class="text-sm text-slate-600 mt-1">${escapeHtml(m.desc)}</p>` : ''}
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button data-id="${m.id}" class="method-edit p-1.5 hover:bg-slate-100 rounded text-slate-500 text-sm" title="编辑">✏️</button>
+              <button data-id="${m.id}" class="method-del p-1.5 hover:bg-red-50 rounded text-slate-500 text-sm" title="删除">🗑</button>
+            </div>
+          </div>
+          <button class="method-toggle text-xs text-blue-600 hover:text-blue-800 mt-2">▼ 展开步骤</button>
+          <div class="method-detail hidden mt-3 pt-3 border-t border-slate-100">
+            <div class="text-xs text-slate-500 mb-1">测试步骤：</div>
+            <div class="method-steps text-sm text-slate-800 bg-slate-50 rounded p-3 mb-2">${ensureStepsHtml(m.steps || '')}</div>
+            ${tags ? `<div class="flex flex-wrap gap-1 mt-2">${tags}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    document.getElementById('methodSearch').addEventListener('input', e => { currentSearchKeyword = e.target.value; renderMethods(); });
+
+    let editingMethodId = null;
+    function openMethodModal(id) {
+      editingMethodId = id || null;
+      const m = id ? methodsData.methods.find(x => x.id === id) : null;
+      document.getElementById('methodModalTitle').textContent = m ? '编辑测试方法' : '添加测试方法';
+      document.getElementById('fMethodModule').value = m ? m.module : '';
+      document.getElementById('fMethodDesc').value = m ? (m.desc || '') : '';
+      document.getElementById('fMethodSteps').innerHTML = m ? ensureStepsHtml(m.steps || '') : '';
+      document.getElementById('fMethodTags').value = m ? (m.tags || []).join(', ') : '';
+      const sel = document.getElementById('fMethodCategory');
+      sel.innerHTML = methodsData.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+      sel.value = m ? m.categoryId : (currentCategoryFilter !== 'all' ? currentCategoryFilter : methodsData.categories[0].id);
+      document.getElementById('methodModal').classList.remove('hidden');
+    }
+    function closeMethodModal() { document.getElementById('methodModal').classList.add('hidden'); editingMethodId = null; }
+    // 测试步骤（contenteditable）：粘贴图片直接渲染、粘贴文本剥离富文本格式
+    document.getElementById('fMethodSteps').addEventListener('paste', async (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      // 优先处理图片
+      for (const item of items) {
+        if (item.type && item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          try {
+            const url = await compressImageFile(file);
+            document.execCommand('insertHTML', false, `<img src="${url}" alt="图片" />`);
+          } catch (err) { alert('图片处理失败：' + err.message); }
+          return;
+        }
+      }
+      // 粘贴文本：剥离富文本格式（防止 Word/Excel 粘进来一堆样式）
+      e.preventDefault();
+      const text = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+      document.execCommand('insertText', false, text);
+    });
+    document.getElementById('fMethodInsertImage').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = async () => {
+        const file = input.files[0]; if (!file) return;
+        try {
+          const url = await compressImageFile(file);
+          document.getElementById('fMethodSteps').focus();
+          document.execCommand('insertHTML', false, `<img src="${url}" alt="图片" />`);
+        } catch (err) { alert('图片处理失败：' + err.message); }
+      };
+      input.click();
+    });
+
+    document.getElementById('addMethodBtn').onclick = () => openMethodModal(null);
+    document.getElementById('methodCancelBtn').onclick = closeMethodModal;
+    document.getElementById('methodModalClose').onclick = closeMethodModal;
+    document.getElementById('methodModal').addEventListener('click', e => { if (e.target.id === 'methodModal') closeMethodModal(); });
+    document.getElementById('methodSaveBtn').onclick = () => {
+      const module = document.getElementById('fMethodModule').value.trim();
+      const categoryId = document.getElementById('fMethodCategory').value;
+      const desc = document.getElementById('fMethodDesc').value.trim();
+      const stepsEl = document.getElementById('fMethodSteps');
+      const hasContent = stepsEl.textContent.trim() || stepsEl.querySelectorAll('img').length > 0;
+      const steps = stepsEl.innerHTML;
+      const tagsRaw = document.getElementById('fMethodTags').value.trim();
+      if (!module) { alert('请填写功能模块'); return; }
+      if (!hasContent) { alert('请填写测试步骤'); return; }
+      const tags = tagsRaw ? tagsRaw.split(/[,，\s]+/).filter(Boolean) : [];
+      if (editingMethodId) Object.assign(methodsData.methods.find(x => x.id === editingMethodId), { module, categoryId, desc, steps, tags });
+      else methodsData.methods.push({ id: newId('m'), module, categoryId, desc, steps, tags });
+      saveMethods(); renderCategoryBar(); renderMethods(); closeMethodModal();
+    };
+
+    document.getElementById('addCategoryBtn').onclick = () => { renderCategoryList(); document.getElementById('categoryModal').classList.remove('hidden'); };
+    document.getElementById('categoryModalClose').onclick = () => document.getElementById('categoryModal').classList.add('hidden');
+    document.getElementById('categoryModal').addEventListener('click', e => { if (e.target.id === 'categoryModal') e.target.classList.add('hidden'); });
+    document.getElementById('newCategoryAdd').onclick = () => {
+      const name = document.getElementById('newCategoryName').value.trim();
+      if (!name) { alert('请填写分类名'); return; }
+      if (methodsData.categories.some(c => c.name === name)) { alert('已存在同名分类'); return; }
+      methodsData.categories.push({ id: newId('cat'), name });
+      saveMethods(); document.getElementById('newCategoryName').value = ''; renderCategoryBar(); renderCategoryList();
+    };
+    function renderCategoryList() {
+      const wrap = document.getElementById('categoryList');
+      wrap.innerHTML = methodsData.categories.map(c => {
+        const count = methodsData.methods.filter(m => m.categoryId === c.id).length;
+        return `<div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded"><span class="text-sm text-slate-700">${escapeHtml(c.name)} <span class="text-xs text-slate-400">(${count} 条)</span></span><button data-id="${c.id}" class="cat-del text-xs text-red-500 hover:text-red-700">删除</button></div>`;
+      }).join('');
+      wrap.querySelectorAll('.cat-del').forEach(btn => btn.onclick = () => {
+        const c = methodsData.categories.find(x => x.id === btn.dataset.id); if (!c) return;
+        const cnt = methodsData.methods.filter(m => m.categoryId === c.id).length;
+        if (cnt > 0 && !confirm(`「${c.name}」下有 ${cnt} 条方法，删除分类会同时删除这些方法。确定继续？`)) return;
+        if (cnt > 0) methodsData.methods = methodsData.methods.filter(m => m.categoryId !== c.id);
+        methodsData.categories = methodsData.categories.filter(x => x.id !== c.id);
+        if (methodsData.categories.length === 0) methodsData.categories.push({ id: 'common', name: '公共模块' });
+        saveMethods(); if (currentCategoryFilter === c.id) currentCategoryFilter = 'all'; renderCategoryBar(); renderMethods(); renderCategoryList();
+      });
+    }
+    document.getElementById('exportMethodsBtn').onclick = () => {
+      const blob = new Blob([JSON.stringify(methodsData, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+      link.download = `test-methods-${new Date().toISOString().slice(0,10)}.json`; link.click();
+    };
+    document.getElementById('importMethodsBtn').onclick = () => document.getElementById('importMethodsFile').click();
+    document.getElementById('importMethodsFile').addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (!data.methods || !Array.isArray(data.methods)) throw new Error('JSON 缺少 methods 数组');
+          const merge = confirm(`将导入 ${data.categories.length} 个分类、${data.methods.length} 条方法。\n\n[确定] 合并  [取消] 覆盖`);
+          if (merge) {
+            const existCat = new Set(methodsData.categories.map(c => c.name));
+            const catIdMap = {};
+            data.categories.forEach(c => {
+              if (existCat.has(c.name)) catIdMap[c.id] = methodsData.categories.find(x => x.name === c.name).id;
+              else { const nid = newId('cat'); methodsData.categories.push({ id: nid, name: c.name }); catIdMap[c.id] = nid; }
+            });
+            const existKey = new Set(methodsData.methods.map(m => { const cat = methodsData.categories.find(x => x.id === m.categoryId); return (cat?cat.name:'') + '|' + m.module; }));
+            data.methods.forEach(m => {
+              const cat = data.categories.find(x => x.id === m.categoryId);
+              const key = (cat?cat.name:'') + '|' + m.module;
+              if (!existKey.has(key)) methodsData.methods.push({ ...m, id: newId('m'), categoryId: catIdMap[m.categoryId] || methodsData.categories[0].id });
+            });
+          } else methodsData = { version: 1, categories: data.categories.map(c => ({ ...c })), methods: data.methods.map(m => ({ ...m })) };
+          saveMethods(); renderCategoryBar(); renderMethods(); alert('导入完成');
+        } catch (err) { alert('导入失败：' + err.message); }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+    document.getElementById('resetMethodsBtn').onclick = () => {
+      if (confirm('确定恢复默认列表吗？所有自定义内容会被清除。')) {
+        methodsData = JSON.parse(JSON.stringify(DEFAULT_METHODS));
+        currentCategoryFilter = 'all'; currentSearchKeyword = '';
+        document.getElementById('methodSearch').value = '';
+        saveMethods(); renderCategoryBar(); renderMethods();
+      }
+    };
+    renderCategoryBar(); renderMethods();
+
+    // ============================================================ Tab 3: 接口清单
+    const APIS_STORAGE_KEY = 'mtt-apis-v1';
+    const API_ENV_KEY = 'mtt-api-current-env';
+    const DEFAULT_APIS = { version: 1, categories: [{ id: 'common', name: '通用' }], apis: [
+      { id: 'demo-api', categoryId: 'common', method: 'GET', name: '示例：获取用户信息',
+        desc: '获取当前登录用户基本信息',
+        paths: [
+          { env: '生产', url: 'https://api.example.com/v1/user/info' },
+          { env: '测试', url: 'https://test-api.example.com/v1/user/info' }
+        ],
+        params: 'query: 无\nheader 中带 token 即可',
+        headers: 'Authorization: Bearer <token>',
+        response: '{\n  "code": 0,\n  "data": {\n    "id": 1,\n    "name": "yami",\n    "email": "yami.wu@makeblock.com"\n  }\n}',
+        tags: ['用户', '示例']
+      }
+    ]};
+    let apisData;
+    let currentApiCategory = 'all';
+    let currentApiKeyword = '';
+    let currentApiEnv = localStorage.getItem(API_ENV_KEY) || '';
+
+    function loadApis() {
+      try { const raw = localStorage.getItem(APIS_STORAGE_KEY); return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_APIS)); }
+      catch (e) { return JSON.parse(JSON.stringify(DEFAULT_APIS)); }
+    }
+    apisData = loadApis();
+    function saveApis() { localStorage.setItem(APIS_STORAGE_KEY, JSON.stringify(apisData)); }
+    if (!localStorage.getItem(APIS_STORAGE_KEY)) saveApis();
+
+    // 收集所有环境名（去重，保持顺序）
+    function getAllEnvs() {
+      const envs = [];
+      const seen = new Set();
+      apisData.apis.forEach(api => {
+        (api.paths || []).forEach(p => { if (p.env && !seen.has(p.env)) { seen.add(p.env); envs.push(p.env); } });
+      });
+      return envs;
+    }
+    function renderApiEnvSelect() {
+      const sel = document.getElementById('apiEnvSelect');
+      const envs = getAllEnvs();
+      if (envs.length === 0) { sel.innerHTML = '<option value="">无环境</option>'; sel.disabled = true; return; }
+      sel.disabled = false;
+      if (!envs.includes(currentApiEnv)) currentApiEnv = envs[0];
+      sel.innerHTML = envs.map(e => `<option value="${escapeHtml(e)}" ${e===currentApiEnv?'selected':''}>${escapeHtml(e)}</option>`).join('');
+      sel.onchange = () => { currentApiEnv = sel.value; localStorage.setItem(API_ENV_KEY, currentApiEnv); renderApis(); };
+    }
+
+    function renderApiCategoryBar() {
+      const bar = document.getElementById('apiCategoryBar');
+      const all = `<button data-cat="all" class="api-cat-btn cat-btn ${currentApiCategory==='all'?'active':''} px-3 py-1 rounded-full text-xs border border-slate-200 bg-white text-slate-600 hover:border-blue-400 transition">全部 (${apisData.apis.length})</button>`;
+      const cats = apisData.categories.map(c => {
+        const count = apisData.apis.filter(a => a.categoryId === c.id).length;
+        return `<button data-cat="${c.id}" class="api-cat-btn cat-btn ${currentApiCategory===c.id?'active':''} px-3 py-1 rounded-full text-xs border border-slate-200 bg-white text-slate-600 hover:border-blue-400 transition">${escapeHtml(c.name)} (${count})</button>`;
+      }).join('');
+      bar.innerHTML = all + cats;
+      bar.querySelectorAll('.api-cat-btn').forEach(btn => btn.addEventListener('click', () => { currentApiCategory = btn.dataset.cat; renderApiCategoryBar(); renderApis(); }));
+    }
+
+    function renderApis() {
+      document.getElementById('apisCount').textContent = apisData.apis.length;
+      const kw = currentApiKeyword.trim().toLowerCase();
+      let list = apisData.apis.filter(a => {
+        if (currentApiCategory !== 'all' && a.categoryId !== currentApiCategory) return false;
+        if (!kw) return true;
+        const allUrls = (a.paths||[]).map(p => p.url).join(' ');
+        const hay = (a.name + ' ' + (a.desc||'') + ' ' + (a.method||'') + ' ' + allUrls + ' ' + (a.tags||[]).join(' ')).toLowerCase();
+        return hay.includes(kw);
+      });
+      const container = document.getElementById('apisContainer');
+      const empty = document.getElementById('apisEmpty');
+      if (list.length === 0) { container.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      const grouped = {};
+      list.forEach(a => { if (!grouped[a.categoryId]) grouped[a.categoryId] = []; grouped[a.categoryId].push(a); });
+      container.innerHTML = apisData.categories.filter(c => grouped[c.id]).map(c => {
+        const cards = grouped[c.id].map(a => apiCard(a)).join('');
+        return `<section class="mb-6"><h3 class="text-sm font-semibold text-slate-600 mb-3">🗂 ${escapeHtml(c.name)} <span class="text-slate-400 ml-1">(${grouped[c.id].length})</span></h3><div class="space-y-3">${cards}</div></section>`;
+      }).join('');
+      bindApiCardEvents();
+    }
+
+    function apiCard(a) {
+      const tags = (a.tags || []).map(t => `<span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">${escapeHtml(t)}</span>`).join('');
+      const currentPath = (a.paths || []).find(p => p.env === currentApiEnv);
+      const currentUrl = currentPath ? currentPath.url : '';
+      const otherEnvs = (a.paths || []).filter(p => p.env !== currentApiEnv);
+      return `
+        <div class="api-card bg-white rounded-lg border border-slate-200 p-5 hover:shadow-sm transition">
+          <div class="flex items-start justify-between mb-2 gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="method-badge-${a.method} px-2 py-0.5 rounded text-xs font-mono font-bold">${a.method}</span>
+                <h4 class="font-semibold text-slate-800">${escapeHtml(a.name)}</h4>
+              </div>
+              ${a.desc ? `<p class="text-sm text-slate-600 mb-2">${escapeHtml(a.desc)}</p>` : ''}
+              ${currentUrl ? `
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="text-xs text-slate-400 shrink-0">${escapeHtml(currentApiEnv)}:</span>
+                  <code class="flex-1 text-xs bg-slate-50 px-2 py-1 rounded font-mono text-slate-700 break-all">${escapeHtml(currentUrl)}</code>
+                  <button class="api-copy-url shrink-0 px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100" data-url="${escapeHtml(currentUrl)}">📋 复制</button>
+                </div>
+              ` : `<div class="text-xs text-amber-600 mt-2">⚠ 该接口未配置「${escapeHtml(currentApiEnv)}」环境</div>`}
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button data-id="${a.id}" class="api-edit p-1.5 hover:bg-slate-100 rounded text-slate-500 text-sm" title="编辑">✏️</button>
+              <button data-id="${a.id}" class="api-del p-1.5 hover:bg-red-50 rounded text-slate-500 text-sm" title="删除">🗑</button>
+            </div>
+          </div>
+          <button class="api-toggle text-xs text-blue-600 hover:text-blue-800 mt-2">▼ 展开详情</button>
+          <div class="api-detail hidden mt-3 pt-3 border-t border-slate-100 space-y-3 text-sm">
+            ${otherEnvs.length ? `
+              <div>
+                <div class="text-xs text-slate-500 mb-1">其他环境：</div>
+                ${otherEnvs.map(p => `
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs text-slate-400 shrink-0 w-12">${escapeHtml(p.env)}:</span>
+                    <code class="flex-1 text-xs bg-slate-50 px-2 py-1 rounded font-mono text-slate-700 break-all">${escapeHtml(p.url)}</code>
+                    <button class="api-copy-url shrink-0 px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100" data-url="${escapeHtml(p.url)}">📋</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+            ${a.params ? `<div><div class="text-xs text-slate-500 mb-1">参数：</div><div class="api-detail-text bg-slate-50 rounded p-3 font-mono text-xs text-slate-800">${escapeHtml(a.params)}</div></div>` : ''}
+            ${a.headers ? `<div><div class="text-xs text-slate-500 mb-1">Headers：</div><div class="api-detail-text bg-slate-50 rounded p-3 font-mono text-xs text-slate-800">${escapeHtml(a.headers)}</div></div>` : ''}
+            ${a.response ? `<div><div class="text-xs text-slate-500 mb-1">响应示例：</div><div class="api-detail-text bg-slate-900 text-slate-100 rounded p-3 font-mono text-xs">${escapeHtml(a.response)}</div></div>` : ''}
+            ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function bindApiCardEvents() {
+      const c = document.getElementById('apisContainer');
+      c.querySelectorAll('.api-toggle').forEach(btn => btn.addEventListener('click', () => {
+        const card = btn.closest('.api-card');
+        const detail = card.querySelector('.api-detail');
+        const isOpen = !detail.classList.contains('hidden');
+        detail.classList.toggle('hidden');
+        btn.textContent = isOpen ? '▼ 展开详情' : '▲ 收起';
+      }));
+      c.querySelectorAll('.api-copy-url').forEach(btn => btn.addEventListener('click', () => copyText(btn.dataset.url, btn)));
+      c.querySelectorAll('.api-edit').forEach(btn => btn.addEventListener('click', () => openApiModal(btn.dataset.id)));
+      c.querySelectorAll('.api-del').forEach(btn => btn.addEventListener('click', () => {
+        const a = apisData.apis.find(x => x.id === btn.dataset.id);
+        if (a && confirm(`确定删除「${a.name}」吗？`)) {
+          apisData.apis = apisData.apis.filter(x => x.id !== btn.dataset.id);
+          saveApis(); renderApiCategoryBar(); renderApiEnvSelect(); renderApis();
+        }
+      }));
+    }
+    document.getElementById('apiSearch').addEventListener('input', e => { currentApiKeyword = e.target.value; renderApis(); });
+
+    let editingApiId = null;
+    function openApiModal(id) {
+      editingApiId = id || null;
+      const a = id ? apisData.apis.find(x => x.id === id) : null;
+      document.getElementById('apiModalTitle').textContent = a ? '编辑接口' : '添加接口';
+      document.getElementById('fApiMethod').value = a ? a.method : 'GET';
+      document.getElementById('fApiName').value = a ? a.name : '';
+      document.getElementById('fApiDesc').value = a ? (a.desc || '') : '';
+      document.getElementById('fApiParams').value = a ? (a.params || '') : '';
+      document.getElementById('fApiHeaders').value = a ? (a.headers || '') : '';
+      document.getElementById('fApiResponse').value = a ? (a.response || '') : '';
+      document.getElementById('fApiTags').value = a ? (a.tags || []).join(', ') : '';
+      const sel = document.getElementById('fApiCategory');
+      sel.innerHTML = apisData.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+      sel.value = a ? a.categoryId : (currentApiCategory !== 'all' ? currentApiCategory : apisData.categories[0].id);
+      renderApiPathsList(a ? a.paths : [{ env: '生产', url: '' }, { env: '测试', url: '' }]);
+      document.getElementById('apiModal').classList.remove('hidden');
+    }
+    function closeApiModal() { document.getElementById('apiModal').classList.add('hidden'); editingApiId = null; }
+    function apiPathRow(p) {
+      return `
+        <div class="api-path-row flex gap-2 items-center">
+          <input type="text" placeholder="环境名" value="${escapeHtml(p.env||'')}" class="api-path-env w-24 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none" />
+          <input type="url" placeholder="https://..." value="${escapeHtml(p.url||'')}" class="api-path-url flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none font-mono" />
+          <button type="button" class="api-path-del px-3 text-red-500 hover:text-red-700">×</button>
+        </div>
+      `;
+    }
+    function renderApiPathsList(paths) {
+      document.getElementById('apiPathsList').innerHTML = paths.map(apiPathRow).join('');
+      document.querySelectorAll('#apiPathsList .api-path-del').forEach(btn => btn.onclick = () => btn.closest('.api-path-row').remove());
+    }
+    document.getElementById('addApiBtn').onclick = () => openApiModal(null);
+    document.getElementById('apiCancelBtn').onclick = closeApiModal;
+    document.getElementById('apiModalClose').onclick = closeApiModal;
+    document.getElementById('apiModal').addEventListener('click', e => { if (e.target.id === 'apiModal') closeApiModal(); });
+    document.getElementById('addApiPathBtn').onclick = () => {
+      document.getElementById('apiPathsList').insertAdjacentHTML('beforeend', apiPathRow({ env: '', url: '' }));
+      document.querySelectorAll('#apiPathsList .api-path-del').forEach(btn => btn.onclick = () => btn.closest('.api-path-row').remove());
+    };
+    document.getElementById('apiSaveBtn').onclick = () => {
+      const method = document.getElementById('fApiMethod').value;
+      const name = document.getElementById('fApiName').value.trim();
+      const categoryId = document.getElementById('fApiCategory').value;
+      const desc = document.getElementById('fApiDesc').value.trim();
+      const params = document.getElementById('fApiParams').value;
+      const headers = document.getElementById('fApiHeaders').value;
+      const response = document.getElementById('fApiResponse').value;
+      const tagsRaw = document.getElementById('fApiTags').value.trim();
+      if (!name) { alert('请填写接口名'); return; }
+      const paths = [];
+      document.querySelectorAll('#apiPathsList .api-path-row').forEach(row => {
+        const env = row.querySelector('.api-path-env').value.trim();
+        const url = row.querySelector('.api-path-url').value.trim();
+        if (env && url) paths.push({ env, url });
+      });
+      if (paths.length === 0) { alert('请至少填写一个环境 URL'); return; }
+      const tags = tagsRaw ? tagsRaw.split(/[,，\s]+/).filter(Boolean) : [];
+      if (editingApiId) Object.assign(apisData.apis.find(x => x.id === editingApiId), { method, name, categoryId, desc, paths, params, headers, response, tags });
+      else apisData.apis.push({ id: newId('api'), method, name, categoryId, desc, paths, params, headers, response, tags });
+      saveApis(); renderApiEnvSelect(); renderApiCategoryBar(); renderApis(); closeApiModal();
+    };
+
+    document.getElementById('addApiCategoryBtn').onclick = () => { renderApiCategoryList(); document.getElementById('apiCategoryModal').classList.remove('hidden'); };
+    document.getElementById('apiCategoryModalClose').onclick = () => document.getElementById('apiCategoryModal').classList.add('hidden');
+    document.getElementById('apiCategoryModal').addEventListener('click', e => { if (e.target.id === 'apiCategoryModal') e.target.classList.add('hidden'); });
+    document.getElementById('newApiCategoryAdd').onclick = () => {
+      const name = document.getElementById('newApiCategoryName').value.trim();
+      if (!name) { alert('请填写分类名'); return; }
+      if (apisData.categories.some(c => c.name === name)) { alert('已存在同名分类'); return; }
+      apisData.categories.push({ id: newId('apicat'), name });
+      saveApis(); document.getElementById('newApiCategoryName').value = ''; renderApiCategoryBar(); renderApiCategoryList();
+    };
+    function renderApiCategoryList() {
+      const wrap = document.getElementById('apiCategoryList');
+      wrap.innerHTML = apisData.categories.map(c => {
+        const count = apisData.apis.filter(a => a.categoryId === c.id).length;
+        return `<div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded"><span class="text-sm text-slate-700">${escapeHtml(c.name)} <span class="text-xs text-slate-400">(${count} 条)</span></span><button data-id="${c.id}" class="api-cat-del text-xs text-red-500 hover:text-red-700">删除</button></div>`;
+      }).join('');
+      wrap.querySelectorAll('.api-cat-del').forEach(btn => btn.onclick = () => {
+        const c = apisData.categories.find(x => x.id === btn.dataset.id); if (!c) return;
+        const cnt = apisData.apis.filter(a => a.categoryId === c.id).length;
+        if (cnt > 0 && !confirm(`「${c.name}」下有 ${cnt} 个接口，删除分类会同时删除这些接口。确定继续？`)) return;
+        if (cnt > 0) apisData.apis = apisData.apis.filter(a => a.categoryId !== c.id);
+        apisData.categories = apisData.categories.filter(x => x.id !== c.id);
+        if (apisData.categories.length === 0) apisData.categories.push({ id: 'common', name: '通用' });
+        saveApis(); if (currentApiCategory === c.id) currentApiCategory = 'all';
+        renderApiCategoryBar(); renderApiEnvSelect(); renderApis(); renderApiCategoryList();
+      });
+    }
+    document.getElementById('exportApisBtn').onclick = () => {
+      const blob = new Blob([JSON.stringify(apisData, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+      link.download = `apis-${new Date().toISOString().slice(0,10)}.json`; link.click();
+    };
+    document.getElementById('importApisBtn').onclick = () => document.getElementById('importApisFile').click();
+    document.getElementById('importApisFile').addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (!data.apis || !Array.isArray(data.apis)) throw new Error('JSON 缺少 apis 数组');
+          const merge = confirm(`将导入 ${data.categories.length} 个分类、${data.apis.length} 个接口。\n\n[确定] 合并  [取消] 覆盖`);
+          if (merge) {
+            const existCat = new Set(apisData.categories.map(c => c.name));
+            const catIdMap = {};
+            data.categories.forEach(c => {
+              if (existCat.has(c.name)) catIdMap[c.id] = apisData.categories.find(x => x.name === c.name).id;
+              else { const nid = newId('apicat'); apisData.categories.push({ id: nid, name: c.name }); catIdMap[c.id] = nid; }
+            });
+            const existKey = new Set(apisData.apis.map(a => a.method + '|' + a.name));
+            data.apis.forEach(a => {
+              const key = a.method + '|' + a.name;
+              if (!existKey.has(key)) apisData.apis.push({ ...a, id: newId('api'), categoryId: catIdMap[a.categoryId] || apisData.categories[0].id });
+            });
+          } else apisData = { version: 1, categories: data.categories.map(c => ({ ...c })), apis: data.apis.map(a => ({ ...a })) };
+          saveApis(); renderApiCategoryBar(); renderApiEnvSelect(); renderApis(); alert('导入完成');
+        } catch (err) { alert('导入失败：' + err.message); }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+    document.getElementById('resetApisBtn').onclick = () => {
+      if (confirm('确定恢复默认列表吗？所有自定义接口会被清除。')) {
+        apisData = JSON.parse(JSON.stringify(DEFAULT_APIS));
+        currentApiCategory = 'all'; currentApiKeyword = '';
+        document.getElementById('apiSearch').value = '';
+        saveApis(); renderApiCategoryBar(); renderApiEnvSelect(); renderApis();
+      }
+    };
+    renderApiEnvSelect(); renderApiCategoryBar(); renderApis();
+
+    // ============================================================ Tab 4: 测试工具
+    const allOnlineTools = TOOLS.filter(t => t.internal && t.url !== 'tools/team-portals.html');
+    const scriptTools = allOnlineTools.filter(t => t.url.startsWith('tools/scripts.html'));
+    const webTools = allOnlineTools.filter(t => !t.url.startsWith('tools/scripts.html'));
+    document.getElementById('toolsCount').textContent = allOnlineTools.length;
+    document.getElementById('scriptToolsCount').textContent = scriptTools.length;
+    document.getElementById('webToolsCount').textContent = webTools.length;
+    function renderToolCard(t) {
+      const platforms = (t.platforms || []).map(p => `<span class="text-xs px-2 py-0.5 rounded ${PLATFORM_COLORS[p] || 'bg-slate-100 text-slate-600'}">${p}</span>`).join('');
+      return `
+        <a href="${t.url}" class="group block bg-white rounded-xl border border-slate-200 p-6 hover:border-blue-500 hover:shadow-lg transition">
+          <div class="flex items-start gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-100">${t.icon || '🧩'}</div>
+            <div class="flex-1">
+              <h3 class="font-semibold text-slate-800 mb-1 group-hover:text-blue-600">${t.name}</h3>
+              <div class="flex flex-wrap gap-1">${platforms}</div>
+            </div>
+            <span class="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition">→</span>
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed">${t.desc}</p>
+        </a>
+      `;
+    }
+    document.getElementById('scriptToolsGrid').innerHTML = scriptTools.map(renderToolCard).join('');
+    document.getElementById('webToolsGrid').innerHTML = webTools.map(renderToolCard).join('');
+    document.getElementById('extCount').textContent = TOOLS.filter(t => !t.internal).length;
   </script>
 </body>
 </html>

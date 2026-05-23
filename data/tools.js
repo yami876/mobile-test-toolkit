@@ -201,6 +201,49 @@ const TOOLS = [
   },
 
   // ===== 在线小工具（站内自研）=====
+  // ----- ADB 脚本工具（含 .bat / .ps1 源码 + 复制/下载）-----
+  {
+    name: '一键导出 XS 日志',
+    desc: '导出 APP 日志 + logcat + dmesg + tombstones + 设备信息，打包 zip 提 bug 用',
+    url: 'tools/scripts.html#export-log',
+    platforms: ['Android'],
+    category: 'mini',
+    tags: ['日志', 'logcat', 'adb', '脚本', 'bat'],
+    icon: '📦',
+    internal: true,
+  },
+  {
+    name: '导出 Android gcode',
+    desc: '从 Android 设备拉 gcode.txt（自动尝试 3 种 pull 方式兼容沙盒权限）',
+    url: 'tools/scripts.html#export-gcode',
+    platforms: ['Android'],
+    category: 'mini',
+    tags: ['gcode', 'adb', '脚本', 'bat', '导出'],
+    icon: '📄',
+    internal: true,
+  },
+  {
+    name: '多设备截图',
+    desc: '自动检测连接设备，多设备时选编号，文件名带时间戳和设备号',
+    url: 'tools/scripts.html#screenshot',
+    platforms: ['Android'],
+    category: 'mini',
+    tags: ['截图', 'screenshot', 'adb', '脚本', 'bat'],
+    icon: '📸',
+    internal: true,
+  },
+  {
+    name: '屏幕录制',
+    desc: 'ADB screenrecord 录屏到 mp4，按任意键停止；自动等待 moov atom 写完防止视频损坏',
+    url: 'tools/scripts.html#record-screen',
+    platforms: ['Android'],
+    category: 'mini',
+    tags: ['录屏', 'screenrecord', 'adb', '脚本', 'bat'],
+    icon: '🎥',
+    internal: true,
+  },
+
+  // ----- 网页工具 -----
   {
     name: 'UA 字符串解析',
     desc: '粘贴 User-Agent，自动解析出系统、机型、浏览器、运行环境（含微信/小程序）',

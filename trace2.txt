@@ -1,0 +1,6 @@
+19:21:55.764223 common-init.c:57                  version 2.54.0.windows.1
+19:21:55.764223 common-init.c:58                  start git.exe push -u origin main
+19:21:55.788311 compat/win32/trace2_win32_process_info.c:190 cmd_ancestry git.exe <- powershell.exe <- explorer.exe
+19:21:55.851735 usage.c:73                        error not a git repository (or any of the parent directories): .git
+19:21:55.851735 usage.c:87                        exit elapsed:0.177117 code:128
+19:21:55.851735 trace2/tr2_tgt_normal.c:128       atexit elapsed:0.177213 code:128

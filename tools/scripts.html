@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>测试脚本库 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .script-block { font-family: "Cascadia Code", "Consolas", "Menlo", monospace; font-size: 12px; line-height: 1.5; }
+    .script-tab.active { border-color: #2563eb; background: #2563eb; }
+    .script-tab.active span { color: #fff; }
+    .script-section { scroll-margin-top: 200px; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📜 测试脚本库</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-900">
+      💡 这些 .bat / .ps1 脚本运行在你<strong>自己的电脑</strong>上（浏览器无法直接执行）。
+      点「下载」把脚本保存到桌面，双击即可使用；或点「复制」粘贴到 cmd 执行。
+      使用前请确认电脑已装 <code class="bg-blue-100 px-1">adb</code> 且在 PATH 中。
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 sticky top-16 bg-slate-50 py-3 z-10">
+      <button data-target="export-log" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📦</span>
+        <span class="text-sm font-medium text-slate-700">导出 XS 日志</span>
+      </button>
+      <button data-target="export-gcode" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📄</span>
+        <span class="text-sm font-medium text-slate-700">导出 Android gcode</span>
+      </button>
+      <button data-target="screenshot" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📸</span>
+        <span class="text-sm font-medium text-slate-700">多设备截图</span>
+      </button>
+      <button data-target="record-screen" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">🎥</span>
+        <span class="text-sm font-medium text-slate-700">屏幕录制</span>
+      </button>
+    </div>
+
+    <!-- ============== 1. 导出 XS 日志 ============== -->
+    <section id="export-log" class="script-section bg-white rounded-lg border border-slate-200 p-6 mb-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">📦 一键导出 XS 移动端日志</h2>
+      <p class="text-slate-600 mb-4">导出 APP 日志 + 系统 logcat + 内核 dmesg + tombstones 崩溃栈 + 设备信息，打包为 <code class="bg-slate-100 px-1">xs_log_时间戳.zip</code>。bug 复现后直接附上这个 zip 提单。</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <div class="font-semibold text-amber-900 mb-1">⚙️ 依赖</div>
+          <ul class="text-amber-800 list-disc pl-5 space-y-0.5">
+            <li>电脑装 adb 并加 PATH</li>
+            <li>手机开 USB 调试 + 已授权</li>
+            <li>两个文件放<strong>同一目录</strong></li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded p-3 text-sm">
+          <div class="font-semibold text-green-900 mb-1">🚀 用法</div>
+          <ul class="text-green-800 list-disc pl-5 space-y-0.5">
+            <li>双击 .bat → 输出到同目录 <code class="bg-green-100 px-1">XS日志/</code></li>
+            <li>拖文件夹到 .bat → 输出到该文件夹</li>
+            <li>命令行：<code class="bg-green-100 px-1">导出XS日志.bat "D:\target"</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- bat -->
+      <div class="mb-5">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 导出XS日志.bat</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-log-bat">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-log-bat" data-filename="导出XS日志.bat">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-log-bat" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-72"></pre>
+      </div>
+
+      <!-- ps1 -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 Export-XSLogs.ps1（配套脚本）</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-log-ps1">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-log-ps1" data-filename="Export-XSLogs.ps1">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-log-ps1" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-72"></pre>
+      </div>
+    </section>
+
+    <!-- ============== 2. 导出 gcode ============== -->
+    <section id="export-gcode" class="script-section bg-white rounded-lg border border-slate-200 p-6 mb-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">📄 导出 Android 设备 gcode</h2>
+      <p class="text-slate-600 mb-4">从 Android 设备拉取最新的 <code class="bg-slate-100 px-1">gcode.txt</code> 文件，自动尝试 3 种 pull 方式以兼容 Android 沙盒权限。</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <div class="font-semibold text-amber-900 mb-1">⚙️ 依赖</div>
+          <ul class="text-amber-800 list-disc pl-5 space-y-0.5">
+            <li>adb 在 PATH</li>
+            <li>USB 调试开启 + 已授权</li>
+            <li>默认包名 <code class="bg-amber-100 px-1">com.xtool.xstudio.mobile</code>（其他渠道改 PKG 变量）</li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded p-3 text-sm">
+          <div class="font-semibold text-green-900 mb-1">🚀 用法</div>
+          <ul class="text-green-800 list-disc pl-5 space-y-0.5">
+            <li>双击 → 保存到默认目录 <code class="bg-green-100 px-1">D:\项目测试\XS移动端\加工效果</code></li>
+            <li>命令行带参数 → 保存到指定目录</li>
+            <li>默认目录不存在 → 自动回退到 .bat 所在目录</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 导出Androidgcode.bat</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-gcode-bat">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-gcode-bat" data-filename="导出Androidgcode.bat">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-gcode-bat" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-96"></pre>
+      </div>
+    </section>
+
+    <!-- ============== 3. 多设备截图 ============== -->
+    <section id="screenshot" class="script-section bg-white rounded-lg border border-slate-200 p-6 mb-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">📸 多设备截图工具</h2>
+      <p class="text-slate-600 mb-4">自动检测已连接设备，多设备时让你选；截图文件名带时间戳和设备号，自动保存到 Bug 目录，方便提单。</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <div class="font-semibold text-amber-900 mb-1">⚙️ 依赖</div>
+          <ul class="text-amber-800 list-disc pl-5 space-y-0.5">
+            <li>adb 在 PATH</li>
+            <li>USB 调试开启 + 已授权</li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded p-3 text-sm">
+          <div class="font-semibold text-green-900 mb-1">🚀 用法</div>
+          <ul class="text-green-800 list-disc pl-5 space-y-0.5">
+            <li>双击 → 自动截图</li>
+            <li>多设备时选编号</li>
+            <li>保存到 <code class="bg-green-100 px-1">D:\项目测试\XS移动端\Bug</code></li>
+            <li>文件名 <code class="bg-green-100 px-1">screenshot_时间_设备号.png</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 screenshot_fancy.bat</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-shot-bat">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-shot-bat" data-filename="screenshot_fancy.bat">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-shot-bat" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-96"></pre>
+      </div>
+    </section>
+
+    <!-- ============== 4. 屏幕录制 ============== -->
+    <section id="record-screen" class="script-section bg-white rounded-lg border border-slate-200 p-6 mb-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">🎥 屏幕录制工具</h2>
+      <p class="text-slate-600 mb-4">用 ADB screenrecord 录制设备屏幕，按任意键停止。自动等待 moov atom 写完，确保视频不损坏；保存的文件名带时间戳和设备序列号。</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <div class="font-semibold text-amber-900 mb-1">⚙️ 依赖</div>
+          <ul class="text-amber-800 list-disc pl-5 space-y-0.5">
+            <li>adb 在 PATH</li>
+            <li>USB 调试 + 已授权</li>
+            <li>两个文件放<strong>同一目录</strong></li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded p-3 text-sm">
+          <div class="font-semibold text-green-900 mb-1">🚀 用法</div>
+          <ul class="text-green-800 list-disc pl-5 space-y-0.5">
+            <li>双击 .bat → 按任意键开始</li>
+            <li>录制中 → 按任意键停止</li>
+            <li>默认码率 8Mbps，保存到 <code class="bg-green-100 px-1">D:\项目测试\XS移动端\Bug</code></li>
+            <li>修改 .ps1 顶部 <code class="bg-green-100 px-1">$SavePath</code> 自定义路径</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 record_screen.bat</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-rec-bat">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-rec-bat" data-filename="record_screen.bat">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-rec-bat" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-72"></pre>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">📄 record_screen.ps1（配套脚本）</h3>
+          <div class="flex gap-2">
+            <button class="copy-btn px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" data-target="s-rec-ps1">复制</button>
+            <button class="dl-btn px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" data-target="s-rec-ps1" data-filename="record_screen.ps1">⬇ 下载</button>
+          </div>
+        </div>
+        <pre id="s-rec-ps1" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-72"></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====== 脚本内容（type="text/plain" 避免 HTML 解析）====== -->
+
+  <script type="text/plain" id="s-log-bat-src">@echo off
+REM ============================================================
+REM  XS Mobile Log Exporter - launcher
+REM
+REM  Usage:
+REM    1) Double-click          - save to <bat dir>\XS日志
+REM    2) Drag folder onto bat  - save to that folder
+REM    3) cmd: bat "D:\dir"     - save to specified folder
+REM
+REM  Requires:
+REM    1) ADB on PATH (or place adb.exe next to this bat)
+REM    2) Phone with USB debugging enabled and authorized
+REM    3) Export-XSLogs.ps1 in the SAME folder as this bat
+REM ============================================================
+
+setlocal
+chcp 65001 >nul
+
+set "SCRIPT_DIR=%~dp0"
+set "PS1=%SCRIPT_DIR%Export-XSLogs.ps1"
+
+if not exist "%PS1%" (
+    echo [ERROR] PowerShell script not found:
+    echo         %PS1%
+    echo Make sure Export-XSLogs.ps1 is in the same folder as this bat.
+    pause
+    exit /b 1
+)
+
+REM Default output: a subfolder next to this bat
+set "DEFAULT_OUT=%SCRIPT_DIR%XS日志"
+
+if "%~1"=="" (
+    set "OUT_DIR=%DEFAULT_OUT%"
+) else (
+    set "OUT_DIR=%~1"
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -OutputDir "%OUT_DIR%"
+
+endlocal
+</script>
+
+  <script type="text/plain" id="s-log-ps1-src"># =====================================================
+# XS 移动端 日志导出脚本
+# 功能: 导出 APP 日志 + 系统 logcat + 内核 dmesg + 设备信息
+#       并打包为 zip, 文件名带时间戳
+# =====================================================
+
+[CmdletBinding()]
+param(
+    [string]$OutputDir = '',
+    [string]$Package   = 'com.xtool.xstudio.mobile',
+    [int]   $LogcatTailLines = 0,
+    [switch]$KeepFolder,
+    [switch]$NoPause
+)
+
+# Fallback: if -OutputDir not given, default to <script dir>\XS日志
+if ([string]::IsNullOrWhiteSpace($OutputDir)) {
+    if ($PSScriptRoot) {
+        $OutputDir = Join-Path $PSScriptRoot 'XS日志'
+    } else {
+        $OutputDir = Join-Path (Get-Location).Path 'XS日志'
+    }
+}
+$ErrorActionPreference = 'Continue'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding           = [System.Text.Encoding]::UTF8
+
+function Write-Step([string]$msg) {
+    Write-Host ""
+    Write-Host ">> $msg" -ForegroundColor Cyan
+}
+
+function Write-Ok([string]$msg)   { Write-Host "   [OK]   $msg" -ForegroundColor Green }
+function Write-Warn2([string]$msg){ Write-Host "   [WARN] $msg" -ForegroundColor Yellow }
+function Write-Err2([string]$msg) { Write-Host "   [FAIL] $msg" -ForegroundColor Red }
+
+function Pause-IfNeeded {
+    if (-not $NoPause) {
+        Write-Host ""
+        Write-Host "按任意键退出..." -ForegroundColor DarkGray
+        [void][System.Console]::ReadKey($true)
+    }
+}
+
+# ---------- 0. 检查 adb ----------
+$adb = (Get-Command adb -ErrorAction SilentlyContinue)
+if (-not $adb) {
+    Write-Err2 "未找到 adb,请先安装 platform-tools 并配置环境变量 PATH"
+    Pause-IfNeeded
+    exit 1
+}
+
+# ---------- 1. 检查设备 ----------
+$devLines = & adb devices | Select-Object -Skip 1 | Where-Object { $_ -match "\sdevice$" }
+if (-not $devLines) {
+    Write-Err2 "未检测到已授权的设备,请检查 USB 连接和 USB 调试授权"
+    & adb devices
+    Pause-IfNeeded
+    exit 1
+}
+$deviceCount = ($devLines | Measure-Object).Count
+if ($deviceCount -gt 1) {
+    Write-Warn2 "检测到多台设备,默认使用第一台。如需指定,请先用 adb -s <serial> 选择"
+}
+
+# ---------- 2. 时间戳 & 目录 ----------
+$ts        = Get-Date -Format 'yyyyMMdd_HHmmss'
+$workDir   = Join-Path $OutputDir "xs_log_$ts"
+$appDir    = Join-Path $workDir   "app_log"
+$sysLog    = Join-Path $workDir   "system_logcat.txt"
+$dmesgLog  = Join-Path $workDir   "system_dmesg.txt"
+$infoLog   = Join-Path $workDir   "device_info.txt"
+$crashDir  = Join-Path $workDir   "tombstones"
+$zipFile   = Join-Path $OutputDir "xs_log_$ts.zip"
+
+Write-Host ""
+Write-Host "=================================================="
+Write-Host " XS 移动端 - 日志一键导出"
+Write-Host "=================================================="
+Write-Host (" 输出目录 : {0}" -f $OutputDir)
+Write-Host (" 包名     : {0}" -f $Package)
+Write-Host (" 时间戳   : {0}" -f $ts)
+Write-Host (" 工作目录 : {0}" -f $workDir)
+Write-Host "=================================================="
+
+try {
+    New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $appDir  -Force | Out-Null
+} catch {
+    Write-Err2 ("创建目录失败: " + $_.Exception.Message)
+    Pause-IfNeeded
+    exit 1
+}
+
+# ---------- 3. APP 日志 ----------
+Write-Step "[1/5] 导出 APP 日志"
+$remotePath = "/sdcard/Android/data/$Package/files/mb_log"
+$probe = & adb shell "ls -d $remotePath 2>/dev/null; echo __END__"
+$exists = ($probe -join "`n") -match [Regex]::Escape($remotePath)
+if ($exists) {
+    $tmpRoot = Join-Path $env:TEMP ("xs_pull_" + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
+    try {
+        $pullOut = & adb pull "$remotePath/." "$tmpRoot" 2>&1
+        $pullOut | ForEach-Object { Write-Host "   $_" }
+
+        $items = Get-ChildItem -LiteralPath $tmpRoot -Force -ErrorAction SilentlyContinue
+        if ($items) {
+            foreach ($it in $items) {
+                Move-Item -LiteralPath $it.FullName -Destination $appDir -Force
+            }
+        }
+        $count = (Get-ChildItem -LiteralPath $appDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
+        if ($count -gt 0) {
+            Write-Ok ("APP 日志已导出, 共 {0} 个文件 -> {1}" -f $count, $appDir)
+        } else {
+            Write-Warn2 "APP 日志目录存在但未拉取到任何文件,请检查权限"
+        }
+    } finally {
+        Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+} else {
+    Write-Warn2 "设备上不存在路径: $remotePath  (可能 APP 未运行或包名错误)"
+}
+
+# ---------- 4. 系统 logcat ----------
+Write-Step "[2/5] 导出系统 logcat"
+try {
+    if ($LogcatTailLines -gt 0) {
+        $logcatRaw = & adb logcat -d -v threadtime -t $LogcatTailLines
+    } else {
+        $logcatRaw = & adb logcat -d -v threadtime
+    }
+    $logcatRaw | Out-File -FilePath $sysLog -Encoding UTF8
+    Write-Ok ("logcat -> {0}" -f $sysLog)
+} catch {
+    Write-Warn2 ("logcat 导出失败: " + $_.Exception.Message)
+}
+
+# ---------- 5. 内核 dmesg ----------
+Write-Step "[3/5] 导出内核 dmesg"
+try {
+    $dmesgRaw = & adb shell dmesg 2>$null
+    $dmesgRaw | Out-File -FilePath $dmesgLog -Encoding UTF8
+    Write-Ok ("dmesg -> {0}" -f $dmesgLog)
+} catch {
+    Write-Warn2 "dmesg 导出失败 (部分系统需要 root)"
+}
+
+# ---------- 6. tombstones ----------
+Write-Step "[4/5] 尝试导出 tombstones (崩溃堆栈,需要权限)"
+try {
+    New-Item -ItemType Directory -Path $crashDir -Force | Out-Null
+    & adb pull /data/tombstones $crashDir 2>$null | Out-Null
+    $tcount = (Get-ChildItem $crashDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
+    if ($tcount -gt 0) {
+        Write-Ok ("tombstones 共 {0} 个文件" -f $tcount)
+    } else {
+        Remove-Item $crashDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Warn2 "无 tombstones 或无访问权限,已跳过"
+    }
+} catch {
+    Write-Warn2 "tombstones 导出失败,已跳过"
+}
+
+# ---------- 7. 设备信息 ----------
+Write-Step "[5/5] 收集设备/APP 信息"
+try {
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("=== 导出时间 ===")
+    [void]$sb.AppendLine($ts)
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine("=== 设备列表 ===")
+    [void]$sb.AppendLine((& adb devices -l | Out-String).TrimEnd())
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine("=== 设备属性 ===")
+    [void]$sb.AppendLine("Brand   : " + (& adb shell getprop ro.product.brand))
+    [void]$sb.AppendLine("Model   : " + (& adb shell getprop ro.product.model))
+    [void]$sb.AppendLine("Android : " + (& adb shell getprop ro.build.version.release))
+    [void]$sb.AppendLine("SDK     : " + (& adb shell getprop ro.build.version.sdk))
+    [void]$sb.AppendLine("Build   : " + (& adb shell getprop ro.build.display.id))
+    [void]$sb.AppendLine("ABI     : " + (& adb shell getprop ro.product.cpu.abi))
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine("=== APP 版本信息 ===")
+    $verInfo = & adb shell "dumpsys package $Package | grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime'" 2>$null
+    if ($verInfo) {
+        [void]$sb.AppendLine(($verInfo | Out-String).TrimEnd())
+    } else {
+        [void]$sb.AppendLine("(未获取到, 检查包名是否正确)")
+    }
+
+    $sb.ToString() | Out-File -FilePath $infoLog -Encoding UTF8
+    Write-Ok ("设备信息 -> {0}" -f $infoLog)
+} catch {
+    Write-Warn2 ("设备信息收集失败: " + $_.Exception.Message)
+}
+
+# ---------- 8. 打包 ----------
+Write-Step "打包压缩"
+try {
+    if (Test-Path $zipFile) { Remove-Item $zipFile -Force }
+    Compress-Archive -Path (Join-Path $workDir '*') -DestinationPath $zipFile -Force
+    if (Test-Path $zipFile) {
+        $sizeMB = [math]::Round((Get-Item $zipFile).Length / 1MB, 2)
+        Write-Ok ("打包完成: {0}  ({1} MB)" -f $zipFile, $sizeMB)
+
+        if (-not $KeepFolder) {
+            Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "   (已删除临时目录, 如需保留请加 -KeepFolder 参数)" -ForegroundColor DarkGray
+        } else {
+            Write-Host ("   临时目录已保留: {0}" -f $workDir) -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Err2 "打包失败,请人工查看 $workDir"
+    }
+} catch {
+    Write-Err2 ("打包失败: " + $_.Exception.Message)
+}
+
+# ---------- 9. 完成 ----------
+Write-Host ""
+Write-Host "=================================================="
+Write-Host " 全部完成" -ForegroundColor Green
+if (Test-Path $zipFile) {
+    Write-Host (" 压缩包: {0}" -f $zipFile) -ForegroundColor Green
+    try {
+        Start-Process explorer.exe ("/select,`"" + $zipFile + "`"")
+    } catch { }
+}
+Write-Host "=================================================="
+
+Pause-IfNeeded
+</script>
+
+  <script type="text/plain" id="s-gcode-bat-src">@echo off
+chcp 65001 >nul
+setlocal
+
+REM ============================================================
+REM  通过 ADB 从 Android 设备导出 gcode.txt
+REM  源路径: /sdcard/Android/data/<包名>/files/task/gcode.txt
+REM  文件名: Android-gcode.txt
+REM
+REM  保存目录优先级：
+REM    1) 命令行参数指定目录（存在时）
+REM    2) 默认目录 DEFAULT_DIR（存在时）
+REM    3) 本 bat 所在目录（兜底）
+REM
+REM  用法：
+REM    1) 双击运行           ->  保存到默认目录；若默认目录不存在则保存到 bat 所在目录
+REM    2) 命令行带参数运行   ->  保存到指定目录
+REM       例: 导出Androidgcode.bat D:\临时\test
+REM       例: 导出Androidgcode.bat "D:\路径 含空格\test"
+REM       注: 如果指定目录不存在，则按上面的优先级自动回退
+REM
+REM  使用前请确认：
+REM   1. 电脑已安装 ADB，并能在命令行直接执行 adb version
+REM      （或将 adb.exe、AdbWinApi.dll、AdbWinUsbApi.dll 与本 bat 放同一目录）
+REM   2. 手机已打开"开发者选项 -> USB 调试"，并已通过 USB 连接电脑
+REM   3. 第一次连接需在手机弹窗中点"允许 USB 调试"
+REM   4. 如测试其他渠道包，请按实际情况修改下方 PKG 变量
+REM ============================================================
+
+REM 如需改成其他 App，只需改下面这一行的包名
+set "PKG=com.xtool.xstudio.mobile"
+
+REM 默认保存目录（不存在则自动回退到 bat 所在目录）
+set "DEFAULT_DIR=D:\项目测试\XS移动端\加工效果"
+
+set "SRC=/sdcard/Android/data/%PKG%/files/task/gcode.txt"
+
+REM 解析保存目录：命令行参数 > 默认目录 > bat 所在目录
+set "DST_DIR="
+if not "%~1"=="" (
+    if exist "%~1\" (
+        set "DST_DIR=%~1\"
+    ) else (
+        echo [提示] 命令行指定目录不存在: %~1
+    )
+)
+
+if not defined DST_DIR (
+    if exist "%DEFAULT_DIR%\" (
+        set "DST_DIR=%DEFAULT_DIR%\"
+    ) else (
+        set "DST_DIR=%~dp0"
+        echo [提示] 默认目录不存在: %DEFAULT_DIR%
+        echo        改用 bat 所在目录: %~dp0
+    )
+)
+
+set "DST=%DST_DIR%Android-gcode.txt"
+
+echo.
+echo [1/3] 检查 ADB 设备连接状态...
+adb get-state >nul 2>&1
+if errorlevel 1 (
+    echo [错误] 未检测到已连接的 Android 设备，请确认：
+    echo   1. 手机已通过 USB 连接到电脑
+    echo   2. 手机已开启"USB 调试"
+    echo   3. 已在手机上点击"允许 USB 调试"
+    goto :end
+)
+adb devices
+
+echo.
+echo [2/3] 正在从手机导出文件...
+echo   源文件: %SRC%
+echo   目标文件: %DST%
+
+REM 先尝试直接 pull（部分系统/已 root 设备可用）
+adb pull "%SRC%" "%DST%" >nul 2>&1
+if exist "%DST%" goto :ok
+
+REM 普通 Android 10+ 由于沙盒权限，直接 pull 可能失败
+REM 改用 run-as 兼容方式：先 cat 到临时位置再 pull
+echo   直接 pull 失败，尝试通过 shell cat 方式导出...
+adb shell "cat %SRC%" > "%DST%" 2>nul
+for %%A in ("%DST%") do if %%~zA gtr 0 goto :ok
+
+REM 最后尝试：先复制到 /sdcard/Download 再 pull
+echo   cat 方式失败，尝试中转 /sdcard/Download/ ...
+adb shell "cp %SRC% /sdcard/Download/_tmp_gcode.txt" >nul 2>&1
+adb pull "/sdcard/Download/_tmp_gcode.txt" "%DST%" >nul 2>&1
+adb shell "rm -f /sdcard/Download/_tmp_gcode.txt" >nul 2>&1
+if exist "%DST%" goto :ok
+
+echo [错误] 导出失败，请确认手机上该文件存在，并已授予 ADB 文件访问权限。
+goto :end
+
+:ok
+echo.
+echo [3/3] 导出成功！
+echo   文件位置: %DST%
+for %%A in ("%DST%") do echo   文件大小: %%~zA 字节
+
+:end
+echo.
+pause
+endlocal
+</script>
+
+  <script type="text/plain" id="s-shot-bat-src">@echo off
+chcp 65001 >nul
+
+REM 1. 设置你的目标目录
+set "TARGET_DIR=D:\项目测试\XS移动端\Bug"
+
+REM 2. 确保目标目录存在
+if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
+
+REM 3. 获取设备列表
+echo 正在扫描连接的设备...
+adb devices > devices.txt
+findstr "device$" devices.txt > connected.txt
+
+REM 4. 统计设备数量
+for /f %%a in ('find /c /v "" ^< connected.txt') do set DEVICE_COUNT=%%a
+
+REM 5. 如果只有一个设备，直接使用
+if %DEVICE_COUNT%==1 (
+    for /f "tokens=1" %%d in (connected.txt) do set SELECTED_DEVICE=%%d
+    echo 发现设备: %SELECTED_DEVICE%
+    goto :SCREENSHOT
+)
+
+REM 6. 如果多个设备，让用户选择
+echo 发现 %DEVICE_COUNT% 个设备:
+echo ========================
+set i=1
+for /f "tokens=1" %%d in (connected.txt) do (
+    echo [%i%] %%d
+    set /a i+=1
+)
+echo ========================
+set /p CHOICE="请选择设备编号 (1-%DEVICE_COUNT%): "
+
+REM 7. 根据选择获取设备序列号
+set i=1
+for /f "tokens=1" %%d in (connected.txt) do (
+    if !i!==%CHOICE% set SELECTED_DEVICE=%%d
+    set /a i+=1
+)
+
+:SCREENSHOT
+REM 8. 使用 PowerShell 获取格式化的时间戳
+for /f "delims=" %%t in ('powershell -Command "Get-Date -Format 'yyyy-MM-dd_HH.mm.ss'"') do set "TIMESTAMP=%%t"
+
+REM 9. 设置文件名和路径
+set "FILENAME=screenshot_%TIMESTAMP%_%SELECTED_DEVICE:~0,6%.png"
+set "FULL_PATH=%TARGET_DIR%\%FILENAME%"
+
+REM 10. 执行截屏命令（指定设备）
+echo 正在截取设备 %SELECTED_DEVICE% 的屏幕...
+adb -s %SELECTED_DEVICE% exec-out screencap -p > "%FULL_PATH%"
+
+REM 11. 检查结果
+if exist "%FULL_PATH%" (
+    echo 成功！截图已保存为: %FILENAME%
+) else (
+    echo 截图保存失败！
+)
+del devices.txt connected.txt
+pause
+</script>
+
+  <script type="text/plain" id="s-rec-bat-src">@echo off
+chcp 65001 >nul
+setlocal
+
+set "PS1=%~dp0record_screen.ps1"
+
+if not exist "%PS1%" (
+    echo [错误] 找不到脚本: %PS1%
+    echo 请确认 record_screen.ps1 与本批处理在同一目录。
+    pause
+    exit /b 1
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%"
+
+set "EC=%ERRORLEVEL%"
+if not "%EC%"=="0" (
+    echo.
+    echo [WARN] PowerShell 退出码: %EC%
+    pause
+)
+endlocal
+</script>
+
+  <script type="text/plain" id="s-rec-ps1-src"># ========================== 配置区 ==========================
+$SavePath = 'D:\项目测试\XS移动端\Bug'
+# 录制码率（bps），8000000 = 8Mbps；可改小以减小文件
+$BitRate  = 8000000
+# ============================================================
+
+# 控制台编码统一用 UTF-8，避免中文乱码
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+} catch {}
+
+function Wait-AnyKey {
+    param([string]$Prompt = '按任意键继续...')
+    Write-Host $Prompt
+    try {
+        [Console]::ReadKey($true) | Out-Null
+    } catch {
+        Read-Host '按回车继续'
+    }
+}
+
+function Stop-RemoteScreenRecord {
+    $pidLine = ((& adb shell "pidof screenrecord" 2>$null) -join ' ').Trim()
+    $sent = $false
+    if (-not [string]::IsNullOrWhiteSpace($pidLine)) {
+        foreach ($p in ($pidLine -split '\s+')) {
+            if ($p -match '^\d+$') {
+                & adb shell "kill -2 $p" 2>$null | Out-Null
+                $sent = $true
+            }
+        }
+    }
+    if (-not $sent) {
+        & adb shell "killall -INT screenrecord" 2>$null | Out-Null
+        & adb shell "pkill -INT screenrecord"   2>$null | Out-Null
+    }
+}
+
+function Wait-RemoteScreenRecordExit {
+    param([int]$TimeoutSec = 20)
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
+        Start-Sleep -Milliseconds 400
+        $alive = ((& adb shell "pidof screenrecord" 2>$null) -join '').Trim()
+        if ([string]::IsNullOrWhiteSpace($alive)) { return $true }
+    }
+    return $false
+}
+
+function Get-RemoteFileSize {
+    param([string]$Path)
+    $size = ((& adb shell "stat -c '%s' '$Path' 2>/dev/null") -join '').Trim()
+    if ($size -match '^\d+$') { return [int64]$size }
+    $size = ((& adb shell "wc -c < '$Path' 2>/dev/null") -join '').Trim()
+    if ($size -match '^\d+$') { return [int64]$size }
+    return -1
+}
+
+function Test-Mp4HasMoov {
+    param([string]$Path)
+    try {
+        $fs = [System.IO.File]::OpenRead($Path)
+        try {
+            $moovBytes = [byte[]](0x6d, 0x6f, 0x6f, 0x76)  # "moov"
+            $buf = New-Object byte[] 65536
+            $hasMoov = $false
+            while (($read = $fs.Read($buf, 0, $buf.Length)) -gt 0) {
+                for ($i = 0; $i -le $read - 4; $i++) {
+                    if ($buf[$i] -eq $moovBytes[0] -and `
+                        $buf[$i+1] -eq $moovBytes[1] -and `
+                        $buf[$i+2] -eq $moovBytes[2] -and `
+                        $buf[$i+3] -eq $moovBytes[3]) {
+                        $hasMoov = $true
+                        break
+                    }
+                }
+                if ($hasMoov) { break }
+            }
+            return $hasMoov
+        } finally { $fs.Dispose() }
+    } catch { return $false }
+}
+
+function Get-DeviceTag {
+    $tag = ''
+    try { $tag = ((& adb get-serialno 2>$null) -join '').Trim() } catch {}
+    if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'unknown') {
+        try { $tag = ((& adb shell getprop ro.serialno 2>$null) -join '').Trim() } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($tag) -or $tag -eq 'unknown') {
+        try { $tag = ((& adb shell getprop ro.product.model 2>$null) -join '').Trim() } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($tag)) { return '' }
+
+    $invalid = [System.IO.Path]::GetInvalidFileNameChars() + [char]' '
+    foreach ($c in $invalid) {
+        $tag = $tag.Replace([string]$c, '_')
+    }
+    while ($tag.Contains('__')) { $tag = $tag.Replace('__', '_') }
+    return $tag.Trim('_')
+}
+
+try {
+    if (-not (Test-Path -LiteralPath $SavePath)) {
+        New-Item -ItemType Directory -Path $SavePath -Force | Out-Null
+    }
+
+    Write-Host '====================================='
+    Write-Host '       ADB 屏幕录制工具'
+    Write-Host '====================================='
+
+    $adbCmd = Get-Command adb -ErrorAction SilentlyContinue
+    if (-not $adbCmd) {
+        Write-Host '[错误] 没有找到 adb 命令，请把 platform-tools 加入 PATH。' -ForegroundColor Red
+        Wait-AnyKey '按任意键退出...'
+        exit 1
+    }
+
+    $state = & adb get-state 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($state)) {
+        Write-Host '[错误] 未检测到 ADB 设备，请连接手机并开启 USB 调试后重试。' -ForegroundColor Red
+        Wait-AnyKey '按任意键退出...'
+        exit 1
+    }
+
+    $ts         = Get-Date -Format 'yyyy-MM-dd_HH.mm.ss'
+    $RemoteFile = "/data/local/tmp/video_$ts.mp4"
+    $deviceTag  = Get-DeviceTag
+
+    if ($deviceTag) {
+        $LocalFile = Join-Path $SavePath ("video_{0}_{1}.mp4" -f $ts, $deviceTag)
+    } else {
+        $LocalFile = Join-Path $SavePath ("video_{0}.mp4" -f $ts)
+    }
+
+    Write-Host (' 设备序列号: ' + $(if ($deviceTag) { $deviceTag } else { '(未识别)' }))
+    Write-Host (' 保存路径: ' + $LocalFile)
+    Write-Host (' 录制码率: ' + $BitRate + ' bps')
+    Write-Host '====================================='
+    Write-Host ''
+
+    Wait-AnyKey '按任意键开始录制...'
+
+    Start-Process -FilePath 'adb' `
+        -ArgumentList @('shell', 'screenrecord', '--bit-rate', "$BitRate", $RemoteFile) `
+        -WindowStyle Hidden | Out-Null
+
+    Start-Sleep -Seconds 1
+
+    Write-Host ''
+    Write-Host '[INFO] 录制中... 按 Ctrl+C 或 任意键 停止录制' -ForegroundColor Yellow
+    Write-Host ''
+
+    [Console]::TreatControlCAsInput = $true
+    try {
+        [Console]::ReadKey($true) | Out-Null
+    } finally {
+        [Console]::TreatControlCAsInput = $false
+    }
+
+    Write-Host ''
+    Write-Host '[INFO] 正在停止录制...' -ForegroundColor Cyan
+
+    Stop-RemoteScreenRecord
+
+    Write-Host '[INFO] 等待 screenrecord 收尾 (写入 moov atom)...' -ForegroundColor Cyan
+    $exited = Wait-RemoteScreenRecordExit -TimeoutSec 20
+    if (-not $exited) {
+        Write-Host '[警告] screenrecord 未在 20 秒内退出，文件可能不完整' -ForegroundColor Yellow
+    }
+    Start-Sleep -Seconds 2
+    & adb shell "sync" 2>$null | Out-Null
+    Start-Sleep -Milliseconds 500
+
+    $remoteSize = Get-RemoteFileSize -Path $RemoteFile
+    if ($remoteSize -ge 0) {
+        Write-Host ('[INFO] 设备端文件大小: {0:N0} 字节' -f $remoteSize) -ForegroundColor DarkGray
+    }
+    if ($remoteSize -ge 0 -and $remoteSize -lt 10240) {
+        Write-Host '[警告] 设备上录制文件 < 10KB，很可能是损坏的' -ForegroundColor Yellow
+    }
+
+    Write-Host '[INFO] 正在拉取文件到本地...' -ForegroundColor Cyan
+    & adb pull $RemoteFile $LocalFile
+
+    if (Test-Path -LiteralPath $LocalFile) {
+        $size = (Get-Item -LiteralPath $LocalFile).Length
+        $hasMoov = Test-Mp4HasMoov -Path $LocalFile
+
+        Write-Host ''
+        Write-Host '====================================='
+        if ($hasMoov) {
+            Write-Host ' [成功] 录制完成' -ForegroundColor Green
+        } else {
+            Write-Host ' [警告] 录制完成但 mp4 缺少 moov atom (可能无法播放)' -ForegroundColor Yellow
+        }
+        Write-Host (' 文件大小: {0:N0} 字节  ({1:N2} MB)' -f $size, ($size / 1MB))
+        Write-Host (' moov 完整性: ' + $(if ($hasMoov) { 'OK' } else { '缺失 文件损坏' }))
+        Write-Host (' 保存位置: ' + $LocalFile)
+        Write-Host '====================================='
+
+        if (-not $hasMoov) {
+            Write-Host ''
+            Write-Host '排查建议:' -ForegroundColor Yellow
+            Write-Host '  1. 设备 Android 版本 (adb shell getprop ro.build.version.release)'
+            Write-Host '  2. 录制时长是否过短 (< 1 秒)'
+            Write-Host '  3. 可尝试用 ffmpeg 修复: ffmpeg -i broken.mp4 -c copy fixed.mp4'
+        }
+    } else {
+        Write-Host '[错误] 文件保存失败，请检查 ADB 连接与设备权限。' -ForegroundColor Red
+    }
+
+    & adb shell rm $RemoteFile 2>$null | Out-Null
+
+} catch {
+    Write-Host ''
+    Write-Host '[FATAL] 脚本异常: ' -ForegroundColor Red -NoNewline
+    Write-Host $_.Exception.Message  -ForegroundColor Red
+    Write-Host $_.ScriptStackTrace   -ForegroundColor DarkRed
+} finally {
+    Write-Host ''
+    Wait-AnyKey '完成！按任意键退出...'
+}
+</script>
+
+  <script>
+    // 把每个 type="text/plain" 里的脚本内容填充到对应的 <pre> 块
+    document.querySelectorAll('script[type="text/plain"][id$="-src"]').forEach(srcEl => {
+      const targetId = srcEl.id.replace(/-src$/, '');
+      const target = document.getElementById(targetId);
+      if (target) target.textContent = srcEl.textContent.replace(/^\n+/, '');
+    });
+
+    // 复制
+    async function copyText(id) {
+      const text = document.getElementById(id).textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) { return false; }
+    }
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ok = await copyText(btn.dataset.target);
+        const old = btn.textContent;
+        btn.textContent = ok ? '✓ 已复制' : '复制失败';
+        btn.classList.add(ok ? 'bg-green-500' : 'bg-red-500');
+        btn.classList.add('text-white');
+        setTimeout(() => {
+          btn.textContent = old;
+          btn.classList.remove('bg-green-500', 'bg-red-500', 'text-white');
+        }, 1500);
+      });
+    });
+
+    // 下载（UTF-8 with BOM，避免 cmd 中文乱码）
+    document.querySelectorAll('.dl-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = document.getElementById(btn.dataset.target).textContent;
+        const bom = '﻿';
+        const blob = new Blob([bom + text], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = btn.dataset.filename;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      });
+    });
+
+    // Tab 切换：一次只显示一个脚本
+    const STORAGE_KEY = 'mtt-scripts-last-tab';
+    const VALID_IDS = ['export-log', 'export-gcode', 'screenshot', 'record-screen'];
+
+    function showScript(id) {
+      document.querySelectorAll('.script-section').forEach(s => s.classList.add('hidden'));
+      const target = document.getElementById(id);
+      if (target) target.classList.remove('hidden');
+      document.querySelectorAll('.script-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.target === id);
+      });
+      try { localStorage.setItem(STORAGE_KEY, id); } catch (e) {}
+    }
+
+    // 初始化：URL hash 优先 > localStorage 上次 Tab > 默认第一个
+    const hashId = location.hash.slice(1);
+    let initialId;
+    if (VALID_IDS.includes(hashId)) {
+      initialId = hashId;
+    } else {
+      let saved = null;
+      try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+      initialId = VALID_IDS.includes(saved) ? saved : 'export-log';
+      history.replaceState(null, '', '#' + initialId);
+    }
+    showScript(initialId);
+
+    // Tab 点击：用 pushState 让浏览器后退键能切回上一个 Tab
+    document.querySelectorAll('.script-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.target;
+        if (location.hash.slice(1) === id) return; // 已经是当前 Tab
+        history.pushState(null, '', '#' + id);
+        showScript(id);
+      });
+    });
+
+    // 监听浏览器后退/前进
+    window.addEventListener('hashchange', () => {
+      const id = VALID_IDS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'export-log';
+      showScript(id);
+    });
+  </script>
+</body>
+</html>
