@@ -389,34 +389,61 @@
         if (btn) { const old = btn.textContent; btn.textContent = '✓ 已复制'; setTimeout(() => btn.textContent = old, 1200); }
       } catch (e) { alert('复制失败'); }
     }
+    // 安全打开 URL：chrome:// edge:// 等浏览器内部协议无法跳转，自动复制并提示
+    async function safeOpenUrl(url) {
+      if (/^(chrome|edge|brave|opera|vivaldi|about):/i.test(url)) {
+        try {
+          await navigator.clipboard.writeText(url);
+          alert(`此地址无法从网页直接跳转：\n${url}\n\n已复制到剪贴板，请粘贴到浏览器地址栏使用。`);
+        } catch (e) { prompt('此地址需手动复制到浏览器地址栏：', url); }
+        return;
+      }
+      window.open(url, '_blank');
+    }
 
     // Lightbox：点击关闭
     document.getElementById('imgLightbox').addEventListener('click', () => {
       document.getElementById('imgLightbox').classList.add('hidden');
     });
 
-    // Tab 切换
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const t = btn.dataset.tab;
-        ['portals', 'methods', 'apis', 'tools'].forEach(name => {
-          document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.toggle('hidden', t !== name);
-        });
+    // Tab 切换（记住上次选中，从二级页面返回时恢复）
+    const TAB_STORAGE_KEY = 'mtt-current-tab';
+    const VALID_TABS = ['portals', 'methods', 'apis', 'tools'];
+    function switchTab(t, persist = true) {
+      if (!VALID_TABS.includes(t)) t = 'portals';
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+      VALID_TABS.forEach(name => {
+        document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.toggle('hidden', t !== name);
       });
+      if (persist) {
+        try { localStorage.setItem(TAB_STORAGE_KEY, t); } catch (e) {}
+        history.replaceState(null, '', '#' + t);
+      }
+    }
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
+    // 初始化：URL hash 优先 > localStorage > 默认 portals
+    (function initTab() {
+      const hash = location.hash.slice(1);
+      if (VALID_TABS.includes(hash)) { switchTab(hash, false); return; }
+      try {
+        const saved = localStorage.getItem(TAB_STORAGE_KEY);
+        if (VALID_TABS.includes(saved)) { switchTab(saved, false); return; }
+      } catch (e) {}
+      // 否则默认 portals（HTML 里已经是 active）
+    })();
 
     // ============================================================ Tab 1: 业务平台
     const PORTAL_STORAGE_KEY = 'mtt-portals-v1';
-    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v4';
+    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v7';
     const DEFAULT_PORTALS = {
       version: 1,
       portals: [
         { id: 'ctc', icon: '📋', name: 'CTC', desc: '测试用例管理平台',
           envs: [{ name: '生产', url: 'https://ctc-next.makeblock.com/#/workplace', note: '' }] },
-        { id: 'aimind', icon: '🤖', name: 'AI 用例平台', desc: 'AI 辅助生成测试用例',
-          envs: [{ name: '生产', url: 'https://aimind.makeblock.com/login', note: '' }] },
+        { id: 'aimind', icon: '🤖', name: 'Zoey 用例平台', desc: 'AI 辅助生成测试用例',
+          envs: [{ name: '默认', url: 'https://aimind.makeblock.com/login', note: '' }] },
         { id: 'c10s', icon: '🏪', name: 'C10S 企业版商家后台', desc: '定制商家管理后台，支持 web 端和 Pad 端登录',
           envs: [
             { name: '国服测试', url: 'https://customthings-test.makeblock.com/v2/login/enterprise',
@@ -450,6 +477,33 @@
           envs: [
             { name: '默认', url: 'https://web.makeblock.com/site/admin_xts/index.html', note: '账号：yami.wu@makeblock.com / 123456' }
           ]
+        },
+        { id: 'atomm', icon: '🌐', name: 'Atomm 内容站', desc: '社区内容站',
+          envs: [
+            { name: '美服生产', url: 'https://www.atomm.com/', note: '' },
+            { name: '国服生产', url: 'https://www.atomm.com.cn/', note: '' },
+            { name: '美服测试', url: 'https://www-test.atomm.com/', note: '' },
+            { name: '国服测试', url: 'https://xtool-community-test.makeblock.com/', note: '' }
+          ]
+        },
+        { id: 'mtranslator', icon: '🌍', name: '翻译平台', desc: 'XS 移动端 / C10s App / C10s Web 项目翻译入口',
+          envs: [
+            { name: 'XS 移动端项目', url: 'https://mtranslator.makeblock.com/#/entry-list/697859faec3239001247f86c/6979c9c6b7363f00137b19a4', note: '' },
+            { name: 'C10s App 项目', url: 'https://mtranslator.makeblock.com/#/file-list/68a688eb297f490012e9efe5', note: '' },
+            { name: 'C10s Web 项目', url: 'https://mtranslator.makeblock.com/#/entry-list/6863ad902a7e670012d75c74/6864ee3d6ea713001215fe14', note: '' }
+          ]
+        },
+        { id: 'aimake', icon: '🎨', name: 'AImake 前端地址', desc: '',
+          envs: [
+            { name: '美服生产', url: 'https://designfind.com/aimake', note: '' },
+            { name: '美服测试', url: 'https://projects-test.designfind.com/aimake', note: '' }
+          ]
+        },
+        { id: 'browser-inspect', icon: '🐞', name: '浏览器调试工具', desc: '远程调试 Android WebView / Chrome / Edge 移动端页面',
+          envs: [
+            { name: 'Chrome (谷歌)', url: 'chrome://inspect/#devices', note: '点击会自动复制 URL（chrome:// 网页无法直接打开）。\n粘贴到 Chrome 地址栏，手机用 USB 连电脑 + 开 USB 调试 + Chrome 已授权，即可看到设备和页面列表。' },
+            { name: 'Edge', url: 'edge://inspect/#devices', note: '点击会自动复制 URL（edge:// 网页无法直接打开）。\n粘贴到 Edge 地址栏，连接方式同 Chrome。' }
+          ]
         }
       ]
     };
@@ -462,17 +516,25 @@
         }
         const d = JSON.parse(raw);
         (d.portals || []).forEach(p => (p.envs || []).forEach(e => { if (typeof e.note !== 'string') e.note = ''; }));
-        // 一次性自动迁移：追加 DEFAULT_PORTALS 中尚未存在的官方平台
+        // 一次性自动迁移：追加缺失的官方平台 + 修正已有平台的旧名字
         if (!localStorage.getItem(PORTAL_MIGRATION_KEY)) {
           const existingIds = new Set(d.portals.map(p => p.id));
-          let added = 0;
+          let changed = 0;
+          // 1) 追加缺失的官方平台
           DEFAULT_PORTALS.portals.forEach(p => {
             if (!existingIds.has(p.id)) {
               d.portals.push(JSON.parse(JSON.stringify(p)));
-              added++;
+              changed++;
             }
           });
-          if (added > 0) localStorage.setItem(PORTAL_STORAGE_KEY, JSON.stringify(d));
+          // 2) aimind 改名：AI 用例平台 → Zoey 用例平台（仅在未自定义时才动）
+          const aimind = d.portals.find(p => p.id === 'aimind');
+          if (aimind && aimind.name === 'AI 用例平台') {
+            aimind.name = 'Zoey 用例平台';
+            (aimind.envs || []).forEach(e => { if (e.name === '生产') e.name = '默认'; });
+            changed++;
+          }
+          if (changed > 0) localStorage.setItem(PORTAL_STORAGE_KEY, JSON.stringify(d));
           localStorage.setItem(PORTAL_MIGRATION_KEY, '1');
         }
         return d;
@@ -511,7 +573,7 @@
         btn.addEventListener('click', () => {
           const portal = data.portals.find(x => x.id === btn.dataset.id);
           if (!portal) return;
-          if (btn.dataset.action === 'open') window.open(portal.envs[0].url, '_blank');
+          if (btn.dataset.action === 'open') safeOpenUrl(portal.envs[0].url);
           else if (btn.dataset.action === 'pick') showEnvPicker(portal);
           else if (btn.dataset.action === 'toggleNote') {
             const card = btn.closest('.bg-white');
@@ -542,8 +604,8 @@
         </div>
       `).join('');
       picker.classList.remove('hidden');
-      document.querySelectorAll('.pick-open-btn').forEach(btn => btn.addEventListener('click', () => window.open(portal.envs[Number(btn.dataset.idx)].url, '_blank')));
-      document.querySelectorAll('.pick-row').forEach(row => row.addEventListener('click', () => window.open(portal.envs[Number(row.dataset.idx)].url, '_blank')));
+      document.querySelectorAll('.pick-open-btn').forEach(btn => btn.addEventListener('click', () => safeOpenUrl(portal.envs[Number(btn.dataset.idx)].url)));
+      document.querySelectorAll('.pick-row').forEach(row => row.addEventListener('click', () => safeOpenUrl(portal.envs[Number(row.dataset.idx)].url)));
       document.querySelectorAll('.pick-note-toggle').forEach(btn => btn.addEventListener('click', () => btn.closest('.border').querySelector('.pick-note-panel').classList.toggle('hidden')));
       document.querySelectorAll('.pick-copy-note').forEach(btn => btn.addEventListener('click', () => copyText(portal.envs[Number(btn.dataset.idx)].note, btn)));
     }
@@ -1079,12 +1141,15 @@
     document.getElementById('webToolsCount').textContent = webTools.length;
     function renderToolCard(t) {
       const platforms = (t.platforms || []).map(p => `<span class="text-xs px-2 py-0.5 rounded ${PLATFORM_COLORS[p] || 'bg-slate-100 text-slate-600'}">${p}</span>`).join('');
+      const isExternal = /^https?:\/\//.test(t.url);
+      const targetAttr = isExternal ? ' target="_blank" rel="noopener"' : '';
+      const extBadge = isExternal ? '<span class="text-xs text-slate-400 ml-1" title="外部链接">↗</span>' : '';
       return `
-        <a href="${t.url}" class="group block bg-white rounded-xl border border-slate-200 p-6 hover:border-blue-500 hover:shadow-lg transition">
+        <a href="${t.url}"${targetAttr} class="group block bg-white rounded-xl border border-slate-200 p-6 hover:border-blue-500 hover:shadow-lg transition">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-100">${t.icon || '🧩'}</div>
             <div class="flex-1">
-              <h3 class="font-semibold text-slate-800 mb-1 group-hover:text-blue-600">${t.name}</h3>
+              <h3 class="font-semibold text-slate-800 mb-1 group-hover:text-blue-600">${t.name}${extBadge}</h3>
               <div class="flex flex-wrap gap-1">${platforms}</div>
             </div>
             <span class="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition">→</span>

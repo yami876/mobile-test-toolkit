@@ -345,6 +345,16 @@ const TOOLS = [
     internal: true,
   },
   {
+    name: 'gcode 预览工具',
+    desc: '可视化预览 gcode 文件，查看加工路径和参数（makeblock 内部工具）',
+    url: 'https://dev-web.makeblock.com/gcode-viewer/index.html',
+    platforms: ['通用'],
+    category: 'mini',
+    tags: ['gcode', '预览', '可视化', '激光雕刻'],
+    icon: '🗺️',
+    internal: true,
+  },
+  {
     name: '团队工具入口',
     desc: '收藏团队常用平台（CTC、AI 用例平台等），支持多环境切换、自由增删改，可导出 JSON 共享',
     url: 'tools/team-portals.html',

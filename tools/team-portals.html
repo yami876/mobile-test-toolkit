@@ -138,10 +138,10 @@
         {
           id: 'aimind',
           icon: '🤖',
-          name: 'AI 用例平台',
+          name: 'Zoey 用例平台',
           desc: 'AI 辅助生成测试用例',
           envs: [
-            { name: '生产', url: 'https://aimind.makeblock.com/login', note: '' }
+            { name: '默认', url: 'https://aimind.makeblock.com/login', note: '' }
           ]
         },
         {
@@ -208,10 +208,53 @@
           envs: [
             { name: '默认', url: 'https://web.makeblock.com/site/admin_xts/index.html', note: '账号：yami.wu@makeblock.com / 123456' }
           ]
+        },
+        {
+          id: 'atomm',
+          icon: '🌐',
+          name: 'Atomm 内容站',
+          desc: '社区内容站',
+          envs: [
+            { name: '美服生产', url: 'https://www.atomm.com/', note: '' },
+            { name: '国服生产', url: 'https://www.atomm.com.cn/', note: '' },
+            { name: '美服测试', url: 'https://www-test.atomm.com/', note: '' },
+            { name: '国服测试', url: 'https://xtool-community-test.makeblock.com/', note: '' }
+          ]
+        },
+        {
+          id: 'mtranslator',
+          icon: '🌍',
+          name: '翻译平台',
+          desc: 'XS 移动端 / C10s App / C10s Web 项目翻译入口',
+          envs: [
+            { name: 'XS 移动端项目', url: 'https://mtranslator.makeblock.com/#/entry-list/697859faec3239001247f86c/6979c9c6b7363f00137b19a4', note: '' },
+            { name: 'C10s App 项目', url: 'https://mtranslator.makeblock.com/#/file-list/68a688eb297f490012e9efe5', note: '' },
+            { name: 'C10s Web 项目', url: 'https://mtranslator.makeblock.com/#/entry-list/6863ad902a7e670012d75c74/6864ee3d6ea713001215fe14', note: '' }
+          ]
+        },
+        {
+          id: 'aimake',
+          icon: '🎨',
+          name: 'AImake 前端地址',
+          desc: '',
+          envs: [
+            { name: '美服生产', url: 'https://designfind.com/aimake', note: '' },
+            { name: '美服测试', url: 'https://projects-test.designfind.com/aimake', note: '' }
+          ]
+        },
+        {
+          id: 'browser-inspect',
+          icon: '🐞',
+          name: '浏览器调试工具',
+          desc: '远程调试 Android WebView / Chrome / Edge 移动端页面',
+          envs: [
+            { name: 'Chrome (谷歌)', url: 'chrome://inspect/#devices', note: '点击会自动复制 URL（chrome:// 网页无法直接打开）。\n粘贴到 Chrome 地址栏，手机用 USB 连电脑 + 开 USB 调试 + Chrome 已授权，即可看到设备和页面列表。' },
+            { name: 'Edge', url: 'edge://inspect/#devices', note: '点击会自动复制 URL（edge:// 网页无法直接打开）。\n粘贴到 Edge 地址栏，连接方式同 Chrome。' }
+          ]
         }
       ]
     };
-    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v4';
+    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v7';
 
     function load() {
       try {
@@ -225,17 +268,23 @@
         (data.portals || []).forEach(p => {
           (p.envs || []).forEach(e => { if (typeof e.note !== 'string') e.note = ''; });
         });
-        // 一次性自动迁移：追加 DEFAULT 中缺失的官方平台
+        // 一次性自动迁移：追加缺失的官方平台 + 修正已有平台的旧名字
         if (!localStorage.getItem(PORTAL_MIGRATION_KEY)) {
           const existingIds = new Set(data.portals.map(p => p.id));
-          let added = 0;
+          let changed = 0;
           DEFAULT_DATA.portals.forEach(p => {
             if (!existingIds.has(p.id)) {
               data.portals.push(JSON.parse(JSON.stringify(p)));
-              added++;
+              changed++;
             }
           });
-          if (added > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          const aimind = data.portals.find(p => p.id === 'aimind');
+          if (aimind && aimind.name === 'AI 用例平台') {
+            aimind.name = 'Zoey 用例平台';
+            (aimind.envs || []).forEach(e => { if (e.name === '生产') e.name = '默认'; });
+            changed++;
+          }
+          if (changed > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
           localStorage.setItem(PORTAL_MIGRATION_KEY, '1');
         }
         return data;
@@ -251,6 +300,17 @@
     }
     function newId() {
       return 'p-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    }
+    // 安全打开 URL：chrome:// edge:// 等浏览器内部协议网页无法跳转，自动复制并提示
+    async function safeOpenUrl(url) {
+      if (/^(chrome|edge|brave|opera|vivaldi|about):/i.test(url)) {
+        try {
+          await navigator.clipboard.writeText(url);
+          alert(`此地址无法从网页直接跳转：\n${url}\n\n已复制到剪贴板，请粘贴到浏览器地址栏使用。`);
+        } catch (e) { prompt('此地址需手动复制到浏览器地址栏：', url); }
+        return;
+      }
+      window.open(url, '_blank');
     }
 
     let state = load();
@@ -311,7 +371,7 @@
       const portal = state.portals.find(x => x.id === id);
       if (!portal) return;
       if (action === 'open') {
-        window.open(portal.envs[0].url, '_blank');
+        safeOpenUrl(portal.envs[0].url);
       } else if (action === 'pick') {
         showEnvPicker(portal);
       } else if (action === 'edit') {
@@ -356,7 +416,7 @@
       document.querySelectorAll('#pickerList .open-env-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          window.open(portal.envs[Number(btn.dataset.idx)].url, '_blank');
+          safeOpenUrl(portal.envs[Number(btn.dataset.idx)].url);
         });
       });
       document.querySelectorAll('#pickerList .note-toggle-btn').forEach(btn => {
@@ -379,7 +439,7 @@
       });
       document.querySelectorAll('#pickerList .env-row').forEach(row => {
         row.addEventListener('click', () => {
-          window.open(portal.envs[Number(row.dataset.idx)].url, '_blank');
+          safeOpenUrl(portal.envs[Number(row.dataset.idx)].url);
         });
       });
     }
