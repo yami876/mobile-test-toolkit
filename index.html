@@ -122,7 +122,15 @@
 
     <!-- ========== Tab 4: 测试工具 ========== -->
     <section id="tabTools" class="tab-pane hidden">
-      <p class="text-sm text-slate-500 mb-5">本地脚本 + 网页工具，常用测试功能一站搞定</p>
+      <p class="text-sm text-slate-500 mb-5">CTC 数据查询 + 本地脚本 + 网页工具，常用测试功能一站搞定</p>
+
+      <div class="mb-8">
+        <h3 class="text-base font-semibold text-slate-700 mb-3 flex flex-wrap items-baseline gap-2">
+          <span>📈 CTC 数据查询</span>
+          <span class="text-xs text-slate-400 font-normal">(<span id="ctcToolsCount">0</span>) · 飞书登录后直接查询 CTC 数据</span>
+        </h3>
+        <div id="ctcToolsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
 
       <div class="mb-8">
         <h3 class="text-base font-semibold text-slate-700 mb-3 flex flex-wrap items-baseline gap-2">
@@ -1135,9 +1143,11 @@
     // ============================================================ Tab 4: 测试工具
     const allOnlineTools = TOOLS.filter(t => t.internal && t.url !== 'tools/team-portals.html');
     const scriptTools = allOnlineTools.filter(t => t.url.startsWith('tools/scripts.html'));
-    const webTools = allOnlineTools.filter(t => !t.url.startsWith('tools/scripts.html'));
+    const ctcTools = allOnlineTools.filter(t => t.url.startsWith('tools/ctc-query.html'));
+    const webTools = allOnlineTools.filter(t => !t.url.startsWith('tools/scripts.html') && !t.url.startsWith('tools/ctc-query.html'));
     document.getElementById('toolsCount').textContent = allOnlineTools.length;
     document.getElementById('scriptToolsCount').textContent = scriptTools.length;
+    document.getElementById('ctcToolsCount').textContent = ctcTools.length;
     document.getElementById('webToolsCount').textContent = webTools.length;
     function renderToolCard(t) {
       const platforms = (t.platforms || []).map(p => `<span class="text-xs px-2 py-0.5 rounded ${PLATFORM_COLORS[p] || 'bg-slate-100 text-slate-600'}">${p}</span>`).join('');
@@ -1159,6 +1169,7 @@
       `;
     }
     document.getElementById('scriptToolsGrid').innerHTML = scriptTools.map(renderToolCard).join('');
+    document.getElementById('ctcToolsGrid').innerHTML = ctcTools.map(renderToolCard).join('');
     document.getElementById('webToolsGrid').innerHTML = webTools.map(renderToolCard).join('');
     document.getElementById('extCount').textContent = TOOLS.filter(t => !t.internal).length;
   </script>

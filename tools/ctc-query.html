@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTC 数据查询 - 移动端测试工具集</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/zh.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .query-tab.active { border-color: #2563eb; background: #2563eb; }
+    .query-tab.active span { color: #fff; }
+    /* ---- 日期范围日历：紧凑尺寸（每格 32px）---- */
+    .flatpickr-calendar { --cell: 32px; width: auto !important; padding: 8px 10px 10px; font-size: 13px;
+      border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
+    .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after { display: none; }
+    .flatpickr-months { height: 30px; margin-bottom: 2px; }
+    .flatpickr-months .flatpickr-month { height: 30px; }
+    .flatpickr-current-month { font-size: 13px; font-weight: 600; padding-top: 6px; height: 30px; }
+    .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { font-weight: 600; }
+    .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { height: 30px; padding: 8px 10px; }
+    .flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg { width: 11px; height: 11px; }
+    .flatpickr-weekdays { height: 24px; }
+    span.flatpickr-weekday { font-size: 11px; font-weight: 500; color: #94a3b8; }
+    .flatpickr-innerContainer, .flatpickr-rContainer { width: auto !important; }
+    .flatpickr-weekdaycontainer, .flatpickr-days .dayContainer { width: calc(var(--cell) * 7 + 8px) !important;
+      min-width: calc(var(--cell) * 7 + 8px) !important; max-width: calc(var(--cell) * 7 + 8px) !important; padding: 0 4px; }
+    .flatpickr-days { width: auto !important; border: 0; }
+    .flatpickr-weekdaycontainer + .flatpickr-weekdaycontainer, .dayContainer + .dayContainer { margin-left: 12px; box-shadow: none; }
+    .flatpickr-day { position: relative; max-width: var(--cell); height: var(--cell); line-height: var(--cell);
+      flex-basis: calc(100% / 7); font-size: 13px; border-radius: 6px; margin-top: 2px; }
+    .flatpickr-day.inRange { box-shadow: -4px 0 0 #e2e8f0, 4px 0 0 #e2e8f0; }
+    .flatpickr-day.startRange, .flatpickr-day.endRange { border-radius: 6px !important; }
+    /* 日历上的节假日 / 调休角标 */
+    /* Tailwind 的 .hidden 是 display:none，会把多月视图里占位的邻月日期挤掉，导致末行错位 */
+    .flatpickr-day.hidden { display: block !important; visibility: hidden; }
+    .flatpickr-day .day-tag { position: absolute; top: 1px; right: 1px; z-index: 2; font-size: 8px; line-height: 1; padding: 1px; border-radius: 3px; }
+    .flatpickr-day .day-tag.off { color: #fff; background: #ef4444; }
+    .flatpickr-day .day-tag.work { color: #fff; background: #64748b; }
+    .flatpickr-day.holiday-off:not(.selected):not(.startRange):not(.endRange):not(.inRange) { color: #ef4444; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
+      <h1 class="font-semibold text-slate-700">📈 CTC 数据查询</h1>
+      <span class="w-16"></span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+
+    <!-- 登录凭证 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-slate-800">🔑 CTC 登录</h2>
+        <span id="tokenState" class="text-xs text-slate-400"></span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="loginBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">飞书登录</button>
+        <span id="loginMsg" class="text-sm text-slate-500"></span>
+      </div>
+      <details id="manualToken" class="mt-4">
+        <summary class="text-xs text-slate-500 cursor-pointer hover:text-slate-700">手动填写 utoken</summary>
+      <div class="flex gap-2 mt-2">
+        <input id="tokenInput" type="password" placeholder="Bearer eyJhbGciOi..."
+          class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono text-sm" />
+        <button id="toggleTokenBtn" class="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 rounded-lg">显示</button>
+        <button id="saveTokenBtn" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+      </div>
+      <details class="mt-3 text-xs text-slate-500">
+        <summary class="cursor-pointer hover:text-slate-700">怎么获取 utoken？</summary>
+        <ul class="list-disc pl-5 mt-2 space-y-1">
+          <li>浏览器登录 <a href="https://ctc-next.makeblock.com" target="_blank" class="text-blue-600 hover:underline">ctc-next.makeblock.com</a> → F12 → Network → 任点一个 <code class="bg-slate-100 px-1">accurate-server</code> 请求 → 复制请求头里的 <code class="bg-slate-100 px-1">utoken</code></li>
+          <li>或：已执行过 <code class="bg-slate-100 px-1">ctcmcpctl login</code> 的，在 <code class="bg-slate-100 px-1">~/.claude.json</code> 里 <code class="bg-slate-100 px-1">mcpServers.ctc.url</code> 的 <code class="bg-slate-100 px-1">utoken=</code> 参数（URL 解码后）</li>
+          <li>token 只保存在你本机浏览器（localStorage），不会上传到本站</li>
+        </ul>
+      </details>
+      </details>
+    </section>
+
+    <!-- 项目 / 版本（各查询共用） -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="block">
+          <span class="text-xs text-slate-500">项目</span>
+          <div class="relative mt-1">
+            <input id="projectInput" type="text" autocomplete="off" placeholder="登录后加载，可输入名称 / 项目代号筛选"
+              class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
+            <div id="projectPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
+          </div>
+        </div>
+        <div class="block">
+          <span class="text-xs text-slate-500">版本</span>
+          <div class="relative mt-1">
+            <input id="versionInput" type="text" autocomplete="off" placeholder="先选项目，可输入版本号筛选"
+              class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
+            <div id="versionPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 查询类型 Tab：新增查询时在这里加按钮，下面加同 id 的 section -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <button data-target="close-rate" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📊</span>
+        <span class="text-sm font-medium text-slate-700">版本关闭率</span>
+      </button>
+      <button data-target="summary" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📝</span>
+        <span class="text-sm font-medium text-slate-700">测试小结</span>
+      </button>
+    </div>
+
+    <!-- 错误 -->
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 text-sm whitespace-pre-wrap"></div>
+
+    <!-- ============== 版本关闭率 ============== -->
+    <section id="close-rate" class="query-section space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-slate-500">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题。选择版本后自动查询。</p>
+      <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+    </div>
+
+    <section id="resultSection" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+      <div class="flex items-center justify-between">
+        <div id="verdict" class="text-xl font-bold"></div>
+        <div class="flex gap-2">
+          <button id="copyJsonBtn" class="px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded">复制 JSON</button>
+          <button id="copyTextBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制报告结论</button>
+        </div>
+      </div>
+      <div id="statCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div>
+        <div class="text-xs text-slate-500 mb-1">报告结论（可直接粘贴进测试报告）</div>
+        <pre id="reportText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </div>
+    </section>
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径（与 CTC 列表页筛选一一对应）</summary>
+      <p class="mt-3 text-xs text-slate-400">门槛：问题关闭率 ≥ 85%，A 类关闭率 ≥ 80%，无遗留 S 类；当前版本与已发布版本须同时满足才判定通过。</p>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-28 text-slate-500">关闭</td><td>状态：关闭</td></tr>
+          <tr><td class="py-1.5 text-slate-500">有效</td><td>状态：新创建、处理中、已解决、关闭、挂起（即全部状态去掉「拒绝」）</td></tr>
+          <tr><td class="py-1.5 text-slate-500">S 类</td><td>严重程度：致命</td></tr>
+          <tr><td class="py-1.5 text-slate-500">A 类</td><td>严重程度：严重</td></tr>
+          <tr><td class="py-1.5 text-slate-500">当前版本</td><td>影响版本：所选版本</td></tr>
+          <tr><td class="py-1.5 text-slate-500">已发布版本</td><td>影响版本：已发布版本</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
+    <!-- ============== 测试小结 ============== -->
+    <section id="summary" class="query-section hidden space-y-6">
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <label class="block">
+          <span class="text-xs text-slate-500">测试轮次</span>
+          <input id="sumRound" type="text" value="第一轮"
+            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        </label>
+        <label class="block md:col-span-2">
+          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
+          <input id="sumRange" type="text" readonly placeholder="选择日期范围"
+            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          <input id="sumStart" type="hidden" />
+          <input id="sumEnd" type="hidden" />
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block">
+            <span class="text-xs text-slate-500">工作日</span>
+            <input id="sumDays" type="number" min="0" placeholder="自动"
+              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">人天</span>
+            <input id="sumManDays" type="number" min="0" placeholder="可不填"
+              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          </label>
+        </div>
+      </div>
+      <p id="sumDaysHint" class="text-xs text-slate-400 -mt-2"></p>
+      <label class="block">
+        <span class="text-xs text-slate-500">测试内容（点选快捷项，可在输入框里继续修改补充，多项用 + 连接）</span>
+        <div id="contentChips" class="mt-1 flex flex-wrap gap-2"></div>
+        <input id="sumContent" type="text" placeholder="点上方快捷项，或直接输入"
+          class="mt-2 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+      </label>
+      <label class="block">
+        <span class="text-xs text-slate-500">风险（可不填；不填则小结里不显示，多条风险每行一条）</span>
+        <textarea id="sumRisk" rows="2" placeholder="如：新接入设备样机不足，兼容性覆盖有限"
+          class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
+      </label>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-slate-400">工作日不填时自动计算（扣除法定节假日、计入调休补班），也可手动填写；新增 / 遗留按问题创建时间筛选，回归关闭按更新时间筛选。</p>
+        <button id="sumBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">生成小结</button>
+      </div>
+    </section>
+
+    <section id="sumResult" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold text-slate-800">测试小结</div>
+        <button id="sumCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制小结</button>
+      </div>
+      <pre id="sumText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      <div>
+        <div class="text-xs text-slate-500 mb-2">数据明细（点数字在 CTC 打开对应问题列表核对）</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-slate-500 border-b border-slate-200">
+              <tr><th class="py-2 font-normal">统计项</th><th class="py-2 font-normal">筛选条件</th><th class="py-2 font-normal text-right">总数</th><th class="py-2 font-normal text-right">严重（A+S）</th></tr>
+            </thead>
+            <tbody id="sumTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-40 text-slate-500">当前轮次新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">当前轮次遗留问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">当前版本共遗留问题</td><td>影响版本：所选版本；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">主线版本共遗留问题</td><td>影响版本：已发布版本；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归 Bug 关闭数</td><td>影响版本：已发布版本；更新时间在测试周期内；状态：关闭</td></tr>
+          <tr><td class="py-1.5 text-slate-500">严重 bug</td><td>严重程度：严重、致命</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
+  </main>
+
+  <!-- ============== CTC 登录 + 各查询 ============== -->
+  <script>
+    const ACCURATE = 'https://accurate-server.makeblock.com';
+    const MFD = 'https://ctc-api.makeblock.com/mfd';   // CTC 项目/人员服务，项目 ID 与缺陷平台一致
+    const TOKEN_KEY = 'ctc-close-rate.utoken';
+    const PROJECT_KEY = 'ctc-close-rate.project';
+
+    const CLOSED = [6];
+    const VALID = [6, 1, 3, 5, 10003];
+    const SEV_S = 10106;   // 致命
+    const SEV_A = 10107;   // 严重
+    const RELEASED = -1;   // versions=-1 表示「已发布版本」
+
+    const RATE_THRESHOLD = 85.0;
+    const A_THRESHOLD = 80.0;
+
+    const $ = (id) => document.getElementById(id);
+    const store = {
+      get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    };
+
+    // ---------- API ----------
+    function normalizeToken(raw) {
+      let t = decodeURIComponent(raw.trim().replace(/\+/g, ' '));
+      if (t && !/^Bearer\s/i.test(t)) t = 'Bearer ' + t;
+      return t;
+    }
+
+    async function request(path, { method = 'GET', body, base = ACCURATE } = {}) {
+      const token = normalizeToken($('tokenInput').value);
+      if (!token) throw new Error('请先点击上方「飞书登录」');
+      const headers = { Accept: 'application/json', utoken: token };
+      if (body !== undefined) headers['Content-Type'] = 'application/json';
+      let resp;
+      try {
+        resp = await fetch(base + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      } catch (e) {
+        throw new Error('网络请求失败（需能访问 accurate-server.makeblock.com，公司网络/VPN）\n' + e.message);
+      }
+      const text = await resp.text();
+      if (!resp.ok) {
+        const hint = resp.status === 401 || resp.status === 403 ? '\n登录已失效，请点击上方「重新登录」。' : '';
+        throw new Error(`${method} ${path} -> HTTP ${resp.status}${hint}\n${text.slice(0, 400)}`);
+      }
+      const payload = JSON.parse(text);
+      // 平台用 code!=0 表示业务失败，HTTP 依然 200
+      if (payload && typeof payload === 'object' && payload.code !== 0 && payload.code !== undefined && payload.code !== null) {
+        throw new Error(`${method} ${path} -> ${payload.code}: ${payload.msg || ''}`);
+      }
+      return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload;
+    }
+
+    const versionCache = {};
+
+    // 影响版本的可选值挂在 template 里 fieldKey=versions 字段的 CustomFieldOptions 下
+    async function versionOptions(projectId) {
+      if (!versionCache[projectId]) {
+        const tpl = await request(`/v1/project/${projectId}/template?issueType=1`);
+        const field = (tpl || []).find((f) => (f || {}).fieldKey === 'versions');
+        const seen = new Set();
+        versionCache[projectId] = ((field && field.CustomFieldOptions) || []).filter((v) => {
+          if (seen.has(v.id)) return false;
+          seen.add(v.id);
+          return true;
+        });
+      }
+      return versionCache[projectId];
+    }
+
+    async function resolveVersion(projectId, ref) {
+      ref = String(ref).trim();
+      const vid = /^\d+$/.test(ref) ? Number(ref) : null;
+      const want = ref.replace(/^[Vv]+/, '');
+      for (const v of await versionOptions(projectId)) {
+        if (vid !== null && v.id === vid) return { id: v.id, vname: v.vname };
+        if ((v.vname || '').replace(/^[Vv]+/, '') === want) return { id: v.id, vname: v.vname };
+      }
+      if (vid !== null) return { id: vid, vname: 'V' + want };
+      throw new Error(`找不到版本：${ref}（点「版本列表」查看可选值）`);
+    }
+
+    async function count(projectId, versions, statuses, severity) {
+      const body = { project: [projectId], versions, issueStatus: statuses, pageSize: 1, pageIndex: 1 };
+      if (severity) body.severity = [severity];
+      const data = await request('/v1/issues/list', { method: 'POST', body });
+      return data.count;
+    }
+
+    // ---------- 计算 ----------
+    const pct = (num, den) => (den ? (num * 100) / den : 0);
+
+    function fmtPct(value) {
+      let text = value.toFixed(1);
+      if (text.endsWith('.0')) text = text.slice(0, -2);
+      return text + '%';
+    }
+
+    const cmpSign = (value, threshold) => (value > threshold ? '>' : value === threshold ? '=' : '<');
+
+    async function collect(projectId, versions) {
+      const [closed, valid, closedA, validA, closedS, validS] = await Promise.all([
+        count(projectId, versions, CLOSED),
+        count(projectId, versions, VALID),
+        count(projectId, versions, CLOSED, SEV_A),
+        count(projectId, versions, VALID, SEV_A),
+        count(projectId, versions, CLOSED, SEV_S),
+        count(projectId, versions, VALID, SEV_S),
+      ]);
+      const rate = pct(closed, valid);
+      const rateA = pct(closedA, validA);
+      return {
+        closed, valid, rate,
+        closed_a: closedA, valid_a: validA, rate_a: rateA,
+        closed_s: closedS, valid_s: validS, left_s: validS - closedS,
+        pass_rate: rate >= RATE_THRESHOLD,
+        pass_a: rateA >= A_THRESHOLD,
+        pass_s: validS - closedS === 0,
+      };
+    }
+
+    function block(title, s) {
+      return [
+        `${title}：`,
+        `问题关闭率：${s.closed}/${s.valid}=${fmtPct(s.rate)} ${cmpSign(s.rate, RATE_THRESHOLD)} ${fmtPct(RATE_THRESHOLD)}`,
+        s.left_s === 0 ? '无遗留S类问题' : `遗留S类问题：${s.left_s}个`,
+        `A类问题关闭率：${s.closed_a}/${s.valid_a}=${fmtPct(s.rate_a)} ${cmpSign(s.rate_a, A_THRESHOLD)} ${fmtPct(A_THRESHOLD)}`,
+      ];
+    }
+
+    // ---------- 渲染 ----------
+    function showError(msg) {
+      $('errorBox').textContent = msg;
+      $('errorBox').classList.toggle('hidden', !msg);
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    function statRow(label, value, ok) {
+      const color = ok ? 'text-green-600' : 'text-red-600';
+      return `<div class="flex justify-between py-1"><span class="text-slate-500">${label}</span><span class="font-mono ${color}">${value} ${ok ? '✓' : '✗'}</span></div>`;
+    }
+
+    function card(title, s) {
+      const ok = s.pass_rate && s.pass_a && s.pass_s;
+      return `
+        <div class="rounded-lg border ${ok ? 'border-green-200 bg-green-50/40' : 'border-red-200 bg-red-50/40'} p-4 text-sm">
+          <div class="font-semibold text-slate-800 mb-2">${esc(title)}</div>
+          ${statRow('问题关闭率', `${s.closed}/${s.valid} = ${fmtPct(s.rate)}`, s.pass_rate)}
+          ${statRow('A 类关闭率', `${s.closed_a}/${s.valid_a} = ${fmtPct(s.rate_a)}`, s.pass_a)}
+          ${statRow('遗留 S 类', `${s.left_s} 个（${s.closed_s}/${s.valid_s} 已关）`, s.pass_s)}
+        </div>`;
+    }
+
+    let lastJson = null;
+
+    async function runQuery() {
+      showError('');
+      const ver = versionCombo.value;
+      if (!ver) { showError('请先选择版本'); return; }
+      $('resultSection').classList.add('hidden');
+      const btn = $('queryBtn');
+      btn.disabled = true;
+      btn.textContent = '查询中…';
+      try {
+        const projectId = projectCombo.value;
+        if (!projectId) throw new Error('请先选择项目');
+        const { id: vid, vname } = await resolveVersion(projectId, ver);
+        const [cur, rel] = await Promise.all([collect(projectId, [vid]), collect(projectId, [RELEASED])]);
+
+        const ok = [cur, rel].every((s) => s.pass_rate && s.pass_a && s.pass_s);
+        const lines = [ok ? '测试通过' : '测试不通过', ...block(`${vname}版本`, cur), ...block('已发布版本', rel)];
+        lastJson = { version: vname, version_id: vid, current: cur, released: rel };
+
+        $('verdict').textContent = (ok ? '✅ ' : '❌ ') + (ok ? '测试通过' : '测试不通过');
+        $('verdict').className = 'text-xl font-bold ' + (ok ? 'text-green-600' : 'text-red-600');
+        $('statCards').innerHTML = card(`${vname} 版本（ID ${vid}）`, cur) + card('已发布版本', rel);
+        $('reportText').textContent = lines.join('\n');
+        $('resultSection').classList.remove('hidden');
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '查询';
+      }
+    }
+
+    // ---------- 可输入筛选的下拉框 ----------
+    function createCombo(name, onSelect) {
+      const input = $(name + 'Input');
+      const panel = $(name + 'Panel');
+      let items = [];      // { value, label, sub, group }
+      let shown = [];
+      let active = -1;
+      let selected = null;
+
+      function render(q) {
+        q = (q || '').trim().toLowerCase();
+        shown = items.filter((it) => !q || `${it.label} ${it.sub || ''} ${it.keys || ''}`.toLowerCase().includes(q));
+        active = shown.length ? 0 : -1;
+        let html = '';
+        let group = null;
+        shown.forEach((it, i) => {
+          if (it.group && it.group !== group) {
+            group = it.group;
+            html += `<div class="px-3 pt-2 pb-1 text-xs text-slate-400 bg-slate-50 sticky top-0">${esc(group)}</div>`;
+          }
+          const isSel = selected && selected.value === it.value;
+          html += `<div data-i="${i}" class="combo-item px-3 py-1.5 cursor-pointer flex justify-between gap-3 ${isSel ? 'font-semibold text-blue-700' : 'text-slate-700'}">
+            <span class="truncate">${esc(it.label)}</span><span class="text-slate-400 truncate">${esc(it.sub || '')}</span></div>`;
+        });
+        panel.innerHTML = html || '<div class="px-3 py-2 text-slate-400">无匹配项</div>';
+        highlight();
+      }
+
+      function highlight() {
+        panel.querySelectorAll('.combo-item').forEach((el) => {
+          const on = Number(el.dataset.i) === active;
+          el.classList.toggle('bg-blue-50', on);
+          if (on) el.scrollIntoView({ block: 'nearest' });
+        });
+      }
+
+      function open() {
+        if (!items.length) return;
+        render('');
+        panel.classList.remove('hidden');
+        input.select();
+      }
+
+      function close() {
+        panel.classList.add('hidden');
+        input.value = selected ? selected.display || selected.label : '';
+      }
+
+      function pick(it, fire = true) {
+        selected = it;
+        close();
+        if (fire && it) onSelect(it);
+      }
+
+      input.addEventListener('focus', open);
+      input.addEventListener('input', () => { panel.classList.remove('hidden'); render(input.value); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (panel.classList.contains('hidden')) return open();
+          if (!shown.length) return;
+          active = (active + (e.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
+          highlight();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (shown[active]) pick(shown[active]);
+          input.blur();
+        } else if (e.key === 'Escape') {
+          input.blur();
+        }
+      });
+      // mousedown 先于 blur，避免点选前面板就被关掉
+      panel.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const el = e.target.closest('.combo-item');
+        if (el) {
+          pick(shown[Number(el.dataset.i)]);
+          input.blur();
+        }
+      });
+      input.addEventListener('blur', close);
+
+      return {
+        setItems(list, placeholder) {
+          items = list;
+          if (placeholder !== undefined) input.placeholder = placeholder;
+          if (selected) selected = items.find((it) => it.value === selected.value) || null;
+          close();
+        },
+        select(value, fire = false) {
+          const it = items.find((x) => String(x.value) === String(value));
+          if (it) pick(it, fire);
+          return !!it;
+        },
+        get value() { return selected ? selected.value : ''; },
+        get item() { return selected; },
+      };
+    }
+
+    const projectCombo = createCombo('project', (it) => {
+      store.set(PROJECT_KEY, it.value);
+      fillVersionList();
+    });
+    const versionCombo = createCombo('version', () => {
+      if (!$('close-rate').classList.contains('hidden')) runQuery();
+    });
+
+    // ---------- 项目列表：与 CTC 顶部「切换项目」弹窗一致 ----------
+    // 顺序取 allSysProjects 原序；「我的项目」= userSysProjects 按该顺序过滤；代号用 CTC 的 code
+    function projectItem(p, group) {
+      return { value: p.id, label: p.name || p.pkey || String(p.id), sub: p.code || '', keys: p.pkey || '', pkey: p.pkey, group };
+    }
+
+    async function loadProjects() {
+      if (!store.get(TOKEN_KEY)) {
+        projectCombo.setItems([], '请先登录');
+        versionCombo.setItems([], '请先登录');
+        return;
+      }
+      try {
+        projectCombo.setItems([], '项目加载中…');
+        const [all, mineList] = await Promise.all([
+          request('/api/v1/allSysProjects', { base: MFD }),
+          request('/api/v1/userSysProjects', { base: MFD }).catch(() => []),
+        ]);
+        const mineIds = new Set((mineList || []).map((p) => p.id));
+        projectCombo.setItems([
+          ...all.filter((p) => mineIds.has(p.id)).map((p) => projectItem(p, '我的项目')),
+          ...all.filter((p) => !mineIds.has(p.id)).map((p) => projectItem(p, '其他项目')),
+        ], '可输入名称 / 项目代号筛选');
+
+        const saved = store.get(PROJECT_KEY) || 'XT019';
+        const hit = all.find((p) => String(p.id) === saved || p.pkey === saved || p.code === saved)
+          || all.find((p) => mineIds.has(p.id));
+        if (hit) projectCombo.select(hit.id, true);
+      } catch (e) {
+        projectCombo.setItems([], '项目加载失败');
+        showError(e.message);
+      }
+    }
+
+    async function fillVersionList() {
+      versionCombo.setItems([], '版本加载中…');
+      try {
+        const list = await versionOptions(projectCombo.value);
+        versionCombo.setItems(list.map((v) => ({
+          value: v.id,
+          label: v.vname || String(v.id),
+          sub: v.released ? '' : '未发布',
+        })), '可输入版本号筛选');
+      } catch (e) {
+        versionCombo.setItems([], '版本加载失败');
+        showError(e.message);
+      }
+    }
+
+    async function copy(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const old = btn.textContent;
+        btn.textContent = '已复制 ✓';
+        setTimeout(() => (btn.textContent = old), 1200);
+      } catch (e) {
+        showError('复制失败，请手动选中文本复制');
+      }
+    }
+
+    // ---------- 测试小结 ----------
+    const OPEN = [1, 3, 10003];          // 遗留：未关闭且未拒绝
+    const SEVERE = [SEV_A, SEV_S];       // 严重 bug = A 类 + S 类
+    const SUMMARY_KEY = 'ctc-query.summary';
+    const CTC_WEB = 'https://ctc-next.makeblock.com';
+
+    function issueBody(projectId, f) {
+      const body = { project: [projectId], versions: f.versions, issueStatus: f.statuses, pageSize: 1, pageIndex: 1 };
+      if (f.created) body.createdAt = f.created;   // ['YYYY-MM-DD', 'YYYY-MM-DD']，两端都含
+      if (f.updated) body.updatedAt = f.updated;
+      if (f.severities) body.severity = f.severities;
+      return body;
+    }
+
+    async function issueCount(projectId, f) {
+      return (await request('/v1/issues/list', { method: 'POST', body: issueBody(projectId, f) })).count;
+    }
+
+    // 与 CTC 列表页筛选参数一致，方便点开核对
+    function ctcListUrl(pkey, f) {
+      const q = new URLSearchParams();
+      f.versions.forEach((v) => q.append('versions', v));
+      (f.created || []).forEach((d) => q.append('createdAt', d));
+      (f.updated || []).forEach((d) => q.append('updatedAt', d));
+      f.statuses.forEach((s) => q.append('issueStatus', s));
+      (f.severities || []).forEach((s) => q.append('severity', s));
+      return `${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/issue/list?${q}`;
+    }
+
+    // 法定节假日 + 调休补班：holiday-cn 按国务院每年放假通知整理，isOffDay=true 放假 / false 补班
+    const HOLIDAY_URL = (year) => `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`;
+    const holidayCache = {};   // year -> Promise<Map<date, isOffDay> | null>
+
+    function loadHolidays(year) {
+      if (!holidayCache[year]) {
+        holidayCache[year] = fetch(HOLIDAY_URL(year))
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+          .then((d) => ((d.days || []).length ? new Map(d.days.map((x) => [x.date, x.isOffDay])) : null))
+          .catch(() => {
+            delete holidayCache[year];   // 失败不缓存，下次再试
+            return null;
+          });
+      }
+      return holidayCache[year];
+    }
+
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    // 返回 { days, missing }：missing 为没拿到节假日数据（未公布或加载失败）的年份，这些年份按周一至周五算
+    async function workdays(start, end) {
+      const years = [];
+      for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) years.push(y);
+      const maps = Object.fromEntries(await Promise.all(years.map(async (y) => [y, await loadHolidays(y)])));
+      let days = 0;
+      for (let d = new Date(start + 'T00:00:00'); d <= new Date(end + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+        const special = maps[d.getFullYear()] && maps[d.getFullYear()].get(ymd(d));
+        const off = special !== undefined ? special : d.getDay() === 0 || d.getDay() === 6;
+        if (!off) days++;
+      }
+      return { days, missing: years.filter((y) => !maps[y]) };
+    }
+
+    const md = (date) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+    // 小结里的测试时间带年份：同一年只在开头写一次（2026/9/23～10/9），跨年两边都写
+    const periodText = (start, end) => start.slice(0, 4) === end.slice(0, 4)
+      ? `${start.slice(0, 4)}/${md(start)}～${md(end)}`
+      : `${start.slice(0, 4)}/${md(start)}～${end.slice(0, 4)}/${md(end)}`;
+
+    function saveSummaryForm() {
+      store.set(SUMMARY_KEY, JSON.stringify({
+        round: $('sumRound').value, start: $('sumStart').value, end: $('sumEnd').value,
+        days: $('sumDays').value, manDays: $('sumManDays').value, content: $('sumContent').value, risk: $('sumRisk').value,
+      }));
+    }
+
+    function restoreSummaryForm() {
+      let saved = {};
+      try { saved = JSON.parse(store.get(SUMMARY_KEY) || '{}'); } catch (e) {}
+      if (saved.round) $('sumRound').value = saved.round;
+      if (saved.start && saved.end) setRange(saved.start, saved.end);
+      if (saved.manDays) $('sumManDays').value = saved.manDays;
+      if (saved.content) $('sumContent').value = saved.content;
+      renderContentChips();
+      if (saved.risk) $('sumRisk').value = saved.risk;
+      if (saved.days) $('sumDays').value = saved.days;
+      refreshDaysPlaceholder(!saved.days);   // 上次手动改过就保留，否则填入自动计算值
+    }
+
+    // ---------- 测试周期：范围选择日历 ----------
+    let rangePicker = null;
+
+    function initRangePicker() {
+      if (!window.flatpickr) {   // CDN 加载失败时退回两个原生日期框
+        ['sumStart', 'sumEnd'].forEach((id) => {
+          $(id).type = 'date';
+          $(id).className = $('sumRange').className.replace('cursor-pointer', '');
+          $(id).addEventListener('change', () => refreshDaysPlaceholder());
+          $('sumRange').parentNode.appendChild($(id));
+        });
+        $('sumRange').remove();
+        return;
+      }
+      rangePicker = flatpickr($('sumRange'), {
+        mode: 'range',
+        locale: window.flatpickr.l10ns.zh
+          ? { ...flatpickr.l10ns.zh, weekdays: { ...flatpickr.l10ns.zh.weekdays, shorthand: ['日', '一', '二', '三', '四', '五', '六'] } }
+          : 'default',
+        dateFormat: 'Y-m-d',
+        showMonths: window.innerWidth >= 768 ? 2 : 1,
+        onDayCreate(_, __, ___, el) {
+          const d = el.dateObj;
+          const map = holidayMaps[d.getFullYear()];
+          const off = map && map.get(ymd(d));
+          if (off === undefined) return;
+          el.insertAdjacentHTML('beforeend', `<span class="day-tag ${off ? 'off' : 'work'}">${off ? '休' : '班'}</span>`);
+          if (off) el.classList.add('holiday-off');
+        },
+        onMonthChange: (_, __, fp) => preloadHolidays(fp),
+        onYearChange: (_, __, fp) => preloadHolidays(fp),
+        onOpen: (_, __, fp) => preloadHolidays(fp),
+        onChange(dates) {
+          if (dates.length !== 2) return;   // 只点了开始日期，等结束日期
+          $('sumStart').value = ymd(dates[0]);
+          $('sumEnd').value = ymd(dates[1]);
+          refreshDaysPlaceholder();
+        },
+      });
+    }
+
+    // 日历角标要同步画，先把当前显示年份（及前后一年）的节假日拉下来，拉完重绘
+    const holidayMaps = {};
+    async function preloadHolidays(fp) {
+      const y = fp ? fp.currentYear : new Date().getFullYear();
+      const years = [y - 1, y, y + 1].filter((x) => !(x in holidayMaps));
+      if (!years.length) return;
+      await Promise.all(years.map(async (x) => { holidayMaps[x] = await loadHolidays(x); }));
+      if (rangePicker) rangePicker.redraw();
+    }
+
+    function setRange(start, end) {
+      $('sumStart').value = start;
+      $('sumEnd').value = end;
+      if (rangePicker) rangePicker.setDate([start, end], false);
+    }
+
+    // fill=true：把自动算出的工作日直接填进输入框（换了日期范围时）
+    async function refreshDaysPlaceholder(fill = true) {
+      const s = $('sumStart').value;
+      const e = $('sumEnd').value;
+      const hint = $('sumDaysHint');
+      if (!(s && e && s <= e)) {
+        $('sumDays').placeholder = '自动';
+        if (fill) $('sumDays').value = '';
+        hint.textContent = '';
+        return;
+      }
+      const { days, missing } = await workdays(s, e);
+      if (s !== $('sumStart').value || e !== $('sumEnd').value) return;   // 期间日期又被改了
+      $('sumDays').placeholder = `自动 ${days}`;
+      if (fill) {
+        $('sumDays').value = days;
+        saveSummaryForm();
+      }
+      hint.textContent = missing.length
+        ? `⚠ ${missing.join('、')} 年节假日数据未公布或加载失败，该年按周一至周五计算`
+        : `已扣除法定节假日、计入调休补班：自动计算 ${days} 个工作日，可手动修改`;
+      hint.className = 'text-xs mt-1 ' + (missing.length ? 'text-amber-600' : 'text-slate-400');
+    }
+
+    // ---------- 测试内容快捷项：点一下加入，再点一下移除；输入框可自由修改 ----------
+    const CONTENT_PRESETS = ['冒烟测试', '新功能测试', '集成测试', 'bug回归测试', 'Fail/Block用例执行', '上线前测试'];
+    const contentParts = () => $('sumContent').value.split('+').map((x) => x.trim()).filter(Boolean);
+
+    function renderContentChips() {
+      const parts = contentParts();
+      $('contentChips').innerHTML = CONTENT_PRESETS.map((name) => {
+        const on = parts.includes(name);
+        return `<button type="button" data-name="${esc(name)}" class="px-3 py-1 text-sm rounded-full border transition ${on
+          ? 'bg-blue-600 border-blue-600 text-white'
+          : 'bg-white border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600'}">${on ? '✓ ' : '+ '}${esc(name)}</button>`;
+      }).join('');
+    }
+
+    function toggleContent(name) {
+      const parts = contentParts();
+      const i = parts.indexOf(name);
+      if (i >= 0) parts.splice(i, 1);
+      else parts.push(name);
+      $('sumContent').value = parts.join('+');
+      renderContentChips();
+      saveSummaryForm();
+    }
+
+    let summaryLines = null;   // 最近一次生成的 1~8 项
+
+    // 有风险才追加一项，序号接在最后；多条风险用（1）（2）分行列出
+    function renderSummaryText() {
+      if (!summaryLines) return;
+      const risks = $('sumRisk').value.split('\n').map((x) => x.trim()).filter(Boolean);
+      const no = summaryLines.length + 1;
+      const riskLines = risks.length === 0 ? []
+        : risks.length === 1 ? [`${no}.风险：${risks[0]}`]
+          : [`${no}.风险：`, ...risks.map((r, i) => `（${i + 1}）${r}`)];
+      $('sumText').textContent = [...summaryLines, ...riskLines].join('\n');
+    }
+
+    async function runSummary() {
+      showError('');
+      const projectId = projectCombo.value;
+      const version = versionCombo.item;
+      const start = $('sumStart').value;
+      const end = $('sumEnd').value;
+      if (!projectId) return showError('请先选择项目');
+      if (!version) return showError('请先选择版本');
+      if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
+      if (start > end) return showError('开始日期不能晚于结束日期');
+      saveSummaryForm();
+
+      const vid = version.value;
+      const vname = version.label;
+      const pkey = projectCombo.item.pkey;
+      const created = [start, end];
+      const rows = [
+        { no: 4, name: '当前轮次新增问题', f: { versions: [vid], statuses: VALID, created }, severe: true },
+        { no: 5, name: '当前轮次遗留问题', f: { versions: [vid], statuses: OPEN, created }, severe: true },
+        { no: 6, name: `${vname}版本共遗留问题`, f: { versions: [vid], statuses: OPEN }, severe: true },
+        { no: 7, name: '主线版本共遗留问题', f: { versions: [RELEASED], statuses: OPEN }, severe: true },
+        { no: 8, name: '回归Bug关闭数', f: { versions: [RELEASED], statuses: CLOSED, updated: created }, severe: false },
+      ];
+
+      const btn = $('sumBtn');
+      btn.disabled = true;
+      btn.textContent = '统计中…';
+      try {
+        await Promise.all(rows.map(async (r) => {
+          r.sf = { ...r.f, severities: SEVERE };
+          [r.total, r.severeCount] = await Promise.all([
+            issueCount(projectId, r.f),
+            r.severe ? issueCount(projectId, r.sf) : Promise.resolve(null),
+          ]);
+        }));
+
+        const days = $('sumDays').value || (await workdays(start, end)).days;
+        const manDays = $('sumManDays').value;
+        const round = $('sumRound').value.trim();
+        summaryLines = [
+          `1.测试版本：${vname}${round ? '-' + round : ''}`,
+          `2.测试时间：${periodText(start, end)}，${days}d${manDays ? `（共${manDays}人天）` : ''}`,
+          `3.测试内容：${contentParts().join('+') || '—'}`,
+          ...rows.map((r) => `${r.no}.${r.name}：${r.total}${r.severe ? `（其中严重bug数：${r.severeCount}）` : ''}`),
+        ];
+        renderSummaryText();
+
+        const link = (url, n) => `<a href="${esc(url)}" target="_blank" class="text-blue-600 hover:underline font-mono">${n}</a>`;
+        const cond = (f) => [
+          f.versions[0] === RELEASED ? '已发布版本' : vname,
+          f.created ? `创建 ${md(start)}～${md(end)}` : '',
+          f.updated ? `更新 ${md(start)}～${md(end)}` : '',
+          f.statuses === OPEN ? '未关闭' : f.statuses === CLOSED ? '已关闭' : '有效',
+        ].filter(Boolean).join(' · ');
+        $('sumTable').innerHTML = rows.map((r) => `
+          <tr>
+            <td class="py-2 text-slate-700">${r.no}. ${esc(r.name)}</td>
+            <td class="py-2 text-slate-500">${esc(cond(r.f))}</td>
+            <td class="py-2 text-right">${link(ctcListUrl(pkey, r.f), r.total)}</td>
+            <td class="py-2 text-right">${r.severe ? link(ctcListUrl(pkey, r.sf), r.severeCount) : '<span class="text-slate-300">—</span>'}</td>
+          </tr>`).join('');
+        $('sumResult').classList.remove('hidden');
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成小结';
+      }
+    }
+
+    // ---------- 飞书登录（与 ctcmcpctl login 同一套流程） ----------
+    const CTC_MCP = 'https://ctc-mcp.makeblock.com';
+    let loginTimer = null;
+
+    function setLoginMsg(text, cls = 'text-slate-500') {
+      $('loginMsg').textContent = text;
+      $('loginMsg').className = 'text-sm ' + cls;
+    }
+
+    function stopLogin() {
+      clearTimeout(loginTimer);
+      loginTimer = null;
+      $('loginBtn').disabled = false;
+    }
+
+    async function startLogin() {
+      // 必须在点击事件里同步开窗，否则会被浏览器拦截弹窗
+      const popup = window.open('about:blank', 'ctc-login', 'width=520,height=680');
+      $('loginBtn').disabled = true;
+      setLoginMsg('正在打开飞书登录…');
+      try {
+        const resp = await fetch(CTC_MCP + '/client/browser/start', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const { request_id: rid, verify_url: url, expires_at: expiresAt } = await resp.json();
+        if (popup && !popup.closed) popup.location.href = url;
+        else window.open(url, '_blank');
+        setLoginMsg('请在弹出的窗口中完成飞书登录…');
+        pollLogin(rid, popup, Date.parse(expiresAt) || Date.now() + 10 * 60 * 1000);
+      } catch (e) {
+        if (popup) popup.close();
+        stopLogin();
+        setLoginMsg('无法发起登录（需公司网络/VPN）：' + e.message, 'text-red-600');
+      }
+    }
+
+    function pollLogin(rid, popup, deadline) {
+      loginTimer = setTimeout(async () => {
+        if (Date.now() > deadline) {
+          stopLogin();
+          setLoginMsg('登录超时，请重新点击登录', 'text-red-600');
+          return;
+        }
+        try {
+          const resp = await fetch(`${CTC_MCP}/client/browser/poll?request_id=${encodeURIComponent(rid)}`);
+          if (resp.status === 404) throw new Error('登录请求已失效，请重新点击登录');
+          const data = await resp.json();
+          if (data.status === 'pending') return pollLogin(rid, popup, deadline);
+          const token = data.accurate_utoken || data.workspace_token || data.workspace_utoken;
+          if (!token) {
+            throw new Error(`登录未完成（status=${data.status}，返回字段：${Object.keys(data).join(', ')}）`);
+          }
+          if (popup && !popup.closed) popup.close();
+          $('tokenInput').value = normalizeToken(token);
+          setLoginMsg('登录完成，正在校验…');
+          await request('/v1/allProjects');   // 确认 token 能访问 CTC 再保存
+          saveToken(token);
+          loadProjects();
+          stopLogin();
+          setLoginMsg('登录成功 ✓', 'text-green-600');
+        } catch (e) {
+          stopLogin();
+          setLoginMsg(e.message, 'text-red-600');
+        }
+      }, 2000);
+    }
+
+    // ---------- token 保存与有效期 ----------
+    function tokenExpiry(token) {
+      try {
+        const part = token.replace(/^Bearer\s+/i, '').split('.')[1];
+        const json = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+        return json.exp ? json.exp * 1000 : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function saveToken(raw) {
+      $('tokenInput').value = normalizeToken(raw);
+      store.set(TOKEN_KEY, $('tokenInput').value);
+      refreshTokenState();
+    }
+
+    function refreshTokenState() {
+      const token = store.get(TOKEN_KEY);
+      const exp = token ? tokenExpiry(token) : null;
+      const el = $('tokenState');
+      if (!token) {
+        el.textContent = '未登录';
+        el.className = 'text-xs text-slate-400';
+      } else if (exp && exp < Date.now()) {
+        el.textContent = '登录已过期，请重新登录';
+        el.className = 'text-xs text-red-600';
+      } else {
+        el.textContent = '已登录' + (exp ? '，有效期至 ' + new Date(exp).toLocaleString() : '');
+        el.className = 'text-xs text-green-600';
+      }
+      $('loginBtn').textContent = token ? '重新登录' : '飞书登录';
+    }
+
+    // ---------- 事件 ----------
+
+    $('tokenInput').value = store.get(TOKEN_KEY);
+    refreshTokenState();
+
+    $('saveTokenBtn').addEventListener('click', () => { saveToken($('tokenInput').value); loadProjects(); });
+    $('loginBtn').addEventListener('click', startLogin);
+    $('toggleTokenBtn').addEventListener('click', (e) => {
+      const input = $('tokenInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      e.target.textContent = input.type === 'password' ? '显示' : '隐藏';
+    });
+    $('queryBtn').addEventListener('click', runQuery);
+    $('sumBtn').addEventListener('click', runSummary);
+    $('sumCopyBtn').addEventListener('click', (e) => copy($('sumText').textContent, e.target));
+    $('sumRisk').addEventListener('input', () => { renderSummaryText(); saveSummaryForm(); });
+    $('contentChips').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-name]');
+      if (btn) toggleContent(btn.dataset.name);
+    });
+    $('sumContent').addEventListener('input', () => { renderContentChips(); saveSummaryForm(); });
+    ['sumRound', 'sumDays', 'sumManDays'].forEach((id) => $(id).addEventListener('input', saveSummaryForm));
+    initRangePicker();
+    preloadHolidays();
+    restoreSummaryForm();
+    loadProjects();
+    $('copyTextBtn').addEventListener('click', (e) => copy($('reportText').textContent, e.target));
+    $('copyJsonBtn').addEventListener('click', (e) => copy(JSON.stringify(lastJson, null, 2), e.target));
+  </script>
+
+  <script>
+    // 查询类型 Tab 切换：URL hash 优先，默认第一个
+    (() => {
+      const ids = [...document.querySelectorAll('.query-tab')].map((b) => b.dataset.target);
+      function show(id) {
+        if (!ids.includes(id)) id = ids[0];
+        document.querySelectorAll('.query-section').forEach((s) => s.classList.toggle('hidden', s.id !== id));
+        document.querySelectorAll('.query-tab').forEach((b) => b.classList.toggle('active', b.dataset.target === id));
+      }
+      document.querySelectorAll('.query-tab').forEach((b) => b.addEventListener('click', () => {
+        history.replaceState(null, '', '#' + b.dataset.target);
+        show(b.dataset.target);
+      }));
+      window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+      show(location.hash.slice(1));
+    })();
+  </script>
+
+</body>
+</html>
