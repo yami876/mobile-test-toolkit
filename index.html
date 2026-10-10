@@ -341,7 +341,8 @@
     </div>
   </div>
 
-  <script src="data/tools.js"></script>
+  <!-- 工具清单每次都重新加载，避免网站更新后浏览器拿缓存里的旧清单 -->
+  <script>document.write('<script src="data/tools.js?v=' + Date.now() + '"><\/script>');</script>
   <script>
     // ============================================================ 公共
     const PLATFORM_COLORS = { 'Android': 'bg-green-100 text-green-700', 'iOS': 'bg-slate-100 text-slate-700', '通用': 'bg-blue-100 text-blue-700' };
