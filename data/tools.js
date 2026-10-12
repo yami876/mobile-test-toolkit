@@ -375,6 +375,16 @@ const TOOLS = [
     internal: true,
   },
   {
+    name: '版本进度',
+    desc: '当前版本待处理/严重/高优问题，测试周期内回归关闭、回归打开、剩余回归数，以及周期内测试计划执行情况',
+    url: 'tools/ctc-query.html#progress',
+    platforms: ['通用'],
+    category: 'mini',
+    tags: ['ctc', '版本进度', '回归', '测试计划', '执行率', '缺陷'],
+    icon: '🚦',
+    internal: true,
+  },
+  {
     name: '测试小结',
     desc: '选项目、版本和测试周期，自动统计新增/遗留/回归关闭问题数，生成每轮测试小结',
     url: 'tools/ctc-query.html#summary',

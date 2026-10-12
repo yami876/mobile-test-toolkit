@@ -113,6 +113,10 @@
         <span class="text-2xl">📊</span>
         <span class="text-sm font-medium text-slate-700">版本关闭率</span>
       </button>
+      <button data-target="progress" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">🚦</span>
+        <span class="text-sm font-medium text-slate-700">版本进度</span>
+      </button>
       <button data-target="summary" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">📝</span>
         <span class="text-sm font-medium text-slate-700">测试小结</span>
@@ -236,6 +240,89 @@
           <tr><td class="py-1.5 text-slate-500">主线版本共遗留问题</td><td>影响版本：已发布版本；状态：新创建、处理中、挂起</td></tr>
           <tr><td class="py-1.5 text-slate-500">回归 Bug 关闭数</td><td>影响版本：已发布版本；更新时间在测试周期内；状态：关闭</td></tr>
           <tr><td class="py-1.5 text-slate-500">严重 bug</td><td>严重程度：严重、致命</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
+    <!-- ============== 版本进度 ============== -->
+    <section id="progress" class="query-section hidden space-y-6">
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 items-end">
+        <label class="block">
+          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
+          <input id="progRange" type="text" readonly placeholder="选择日期范围"
+            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          <input id="progStart" type="hidden" />
+          <input id="progEnd" type="hidden" />
+        </label>
+        <div class="block">
+          <span class="text-xs text-slate-500">回归统计版本</span>
+          <div class="relative mt-1">
+            <input id="regVersionInput" type="text" autocomplete="off" placeholder="已发布版本"
+              class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
+            <div id="regVersionPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
+          </div>
+        </div>
+        <button id="progBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+      </div>
+      <p class="text-xs text-slate-400">待处理 / 严重 / 高优问题统计上方所选版本；回归关闭、回归打开、剩余回归统计「回归统计版本」；测试计划取时间与测试周期有重叠的计划。</p>
+    </section>
+
+    <section id="progResult" class="hidden space-y-6">
+      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold text-slate-800">🐞 版本 Bug 情况</div>
+          <button id="progCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制文字版</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-slate-500 border-b border-slate-200">
+              <tr><th class="py-2 font-normal">统计项</th><th class="py-2 font-normal">筛选条件</th><th class="py-2 font-normal text-right">数量</th></tr>
+            </thead>
+            <tbody id="bugTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-slate-400">点数字在 CTC 打开对应问题列表核对。</p>
+      </section>
+
+      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+        <div class="font-semibold text-slate-800">📋 测试计划情况</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left whitespace-nowrap">
+            <thead class="text-slate-500 border-b border-slate-200">
+              <tr>
+                <th class="py-2 pr-3 font-normal">计划</th><th class="py-2 pr-3 font-normal">版本</th><th class="py-2 pr-3 font-normal">阶段</th>
+                <th class="py-2 pr-3 font-normal">状态</th><th class="py-2 pr-3 font-normal">时间</th>
+                <th class="py-2 pr-3 font-normal text-right">用例</th><th class="py-2 pr-3 font-normal text-right">通过</th>
+                <th class="py-2 pr-3 font-normal text-right">失败</th><th class="py-2 pr-3 font-normal text-right">阻塞</th>
+                <th class="py-2 pr-3 font-normal text-right">未执行</th><th class="py-2 pr-3 font-normal text-right">执行率</th>
+                <th class="py-2 font-normal text-right">通过率</th>
+              </tr>
+            </thead>
+            <tbody id="planTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-2">
+        <div class="text-xs text-slate-500">文字版（可直接粘贴）</div>
+        <pre id="progText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </section>
+    </section>
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-32 text-slate-500">待处理问题</td><td>影响版本：所选版本；状态：新创建、处理中</td></tr>
+          <tr><td class="py-1.5 text-slate-500">其中严重问题</td><td>待处理问题中，严重程度：严重、致命</td></tr>
+          <tr><td class="py-1.5 text-slate-500">其中高优问题</td><td>待处理问题中，优先级：最高、高</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归关闭数</td><td>影响版本：回归统计版本；更新时间在测试周期内；状态：关闭</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归打开数</td><td>影响版本：回归统计版本；更新时间在测试周期内；回归失败；状态：新创建、处理中、已解决、关闭、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">剩余回归数</td><td>影响版本：回归统计版本；更新时间在测试周期开始日之前；状态：已解决</td></tr>
+          <tr><td class="py-1.5 text-slate-500">测试计划</td><td>计划时间与测试周期有重叠：开始取实际开始（没有则取计划开始），结束取实际结束（未结束取计划结束，都没有则只看开始日期）；执行率 = 已执行 ÷ 用例总数，通过率 = 通过 ÷ 已执行</td></tr>
         </tbody>
       </table>
     </details>
@@ -582,6 +669,7 @@
           label: v.vname || String(v.id),
           sub: v.released ? '' : '未发布',
         })), '可输入版本号筛选');
+        fillRegVersionList(list);
       } catch (e) {
         versionCombo.setItems([], '版本加载失败');
         showError(e.message);
@@ -610,6 +698,8 @@
       if (f.created) body.createdAt = f.created;   // ['YYYY-MM-DD', 'YYYY-MM-DD']，两端都含
       if (f.updated) body.updatedAt = f.updated;
       if (f.severities) body.severity = f.severities;
+      if (f.priorities) body.priority = f.priorities;
+      if (f.regressFail) body.regressFail = f.regressFail;   // 只接受整数 1
       return body;
     }
 
@@ -625,6 +715,8 @@
       (f.updated || []).forEach((d) => q.append('updatedAt', d));
       f.statuses.forEach((s) => q.append('issueStatus', s));
       (f.severities || []).forEach((s) => q.append('severity', s));
+      (f.priorities || []).forEach((s) => q.append('priority', s));
+      if (f.regressFail) q.append('regressFail', f.regressFail);
       return `${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/issue/list?${q}`;
     }
 
@@ -687,21 +779,25 @@
       refreshDaysPlaceholder(!saved.days);   // 上次手动改过就保留，否则填入自动计算值
     }
 
-    // ---------- 测试周期：范围选择日历 ----------
-    let rangePicker = null;
+    // ---------- 日期范围日历（测试小结、版本进度共用） ----------
+    // 页面上约定：<prefix>Range 是显示用输入框，<prefix>Start / <prefix>End 是隐藏的值
+    const rangePickers = [];
 
-    function initRangePicker() {
+    function createRangePicker(prefix, onRange) {
+      const input = $(prefix + 'Range');
+      const startEl = $(prefix + 'Start');
+      const endEl = $(prefix + 'End');
       if (!window.flatpickr) {   // CDN 加载失败时退回两个原生日期框
-        ['sumStart', 'sumEnd'].forEach((id) => {
-          $(id).type = 'date';
-          $(id).className = $('sumRange').className.replace('cursor-pointer', '');
-          $(id).addEventListener('change', () => refreshDaysPlaceholder());
-          $('sumRange').parentNode.appendChild($(id));
+        [startEl, endEl].forEach((el) => {
+          el.type = 'date';
+          el.className = input.className.replace('cursor-pointer', '');
+          el.addEventListener('change', () => onRange(startEl.value, endEl.value));
+          input.parentNode.appendChild(el);
         });
-        $('sumRange').remove();
-        return;
+        input.remove();
+        return { set(s, e) { startEl.value = s; endEl.value = e; } };
       }
-      rangePicker = flatpickr($('sumRange'), {
+      const fp = flatpickr(input, {
         mode: 'range',
         locale: window.flatpickr.l10ns.zh
           ? { ...flatpickr.l10ns.zh, weekdays: { ...flatpickr.l10ns.zh.weekdays, shorthand: ['日', '一', '二', '三', '四', '五', '六'] } }
@@ -716,16 +812,24 @@
           el.insertAdjacentHTML('beforeend', `<span class="day-tag ${off ? 'off' : 'work'}">${off ? '休' : '班'}</span>`);
           if (off) el.classList.add('holiday-off');
         },
-        onMonthChange: (_, __, fp) => preloadHolidays(fp),
-        onYearChange: (_, __, fp) => preloadHolidays(fp),
-        onOpen: (_, __, fp) => preloadHolidays(fp),
+        onMonthChange: (_, __, f) => preloadHolidays(f),
+        onYearChange: (_, __, f) => preloadHolidays(f),
+        onOpen: (_, __, f) => preloadHolidays(f),
         onChange(dates) {
           if (dates.length !== 2) return;   // 只点了开始日期，等结束日期
-          $('sumStart').value = ymd(dates[0]);
-          $('sumEnd').value = ymd(dates[1]);
-          refreshDaysPlaceholder();
+          startEl.value = ymd(dates[0]);
+          endEl.value = ymd(dates[1]);
+          onRange(startEl.value, endEl.value);
         },
       });
+      rangePickers.push(fp);
+      return {
+        set(s, e) {
+          startEl.value = s;
+          endEl.value = e;
+          fp.setDate([s, e], false);
+        },
+      };
     }
 
     // 日历角标要同步画，先把当前显示年份（及前后一年）的节假日拉下来，拉完重绘
@@ -735,13 +839,12 @@
       const years = [y - 1, y, y + 1].filter((x) => !(x in holidayMaps));
       if (!years.length) return;
       await Promise.all(years.map(async (x) => { holidayMaps[x] = await loadHolidays(x); }));
-      if (rangePicker) rangePicker.redraw();
+      rangePickers.forEach((p) => p.redraw());
     }
 
+    let sumPicker = null;
     function setRange(start, end) {
-      $('sumStart').value = start;
-      $('sumEnd').value = end;
-      if (rangePicker) rangePicker.setDate([start, end], false);
+      sumPicker.set(start, end);
     }
 
     // fill=true：把自动算出的工作日直接填进输入框（换了日期范围时）
@@ -875,6 +978,177 @@
       }
     }
 
+    // ---------- 版本进度：版本 Bug 情况 + 测试计划情况 ----------
+    const PENDING = [1, 3];               // 待处理：新创建、处理中
+    const HIGH_PRIORITY = [1, 2];         // 高优：最高、高
+    const RESOLVED = [5];                 // 已解决
+    const PROGRESS_KEY = 'ctc-query.progress';
+    const PLAN_STATUS = { Prepare: '未开始', Underway: '进行中', Done: '已完成' };
+    const PLAN_STAGE = { smoke: '冒烟', newfeature: '新功能', system: '系统测试', regression: '回归', selftest: '开发自测' };
+
+    let progPicker = null;
+    const regVersionCombo = createCombo('regVersion', saveProgressForm);
+
+    function saveProgressForm() {
+      store.set(PROGRESS_KEY, JSON.stringify({
+        start: $('progStart').value, end: $('progEnd').value, regVersion: regVersionCombo.value,
+      }));
+    }
+
+    function restoreProgressForm() {
+      let saved = {};
+      try { saved = JSON.parse(store.get(PROGRESS_KEY) || '{}'); } catch (e) {}
+      // 没查过版本进度时，默认沿用测试小结的周期
+      const start = saved.start || $('sumStart').value;
+      const end = saved.end || $('sumEnd').value;
+      if (start && end) progPicker.set(start, end);
+    }
+
+    function fillRegVersionList(list) {
+      let saved = {};
+      try { saved = JSON.parse(store.get(PROGRESS_KEY) || '{}'); } catch (e) {}
+      regVersionCombo.setItems([
+        { value: RELEASED, label: '已发布版本', sub: '默认' },
+        ...list.map((v) => ({ value: v.id, label: v.vname || String(v.id), sub: v.released ? '' : '未发布' })),
+      ], '可输入版本号筛选');
+      if (!regVersionCombo.select(saved.regVersion || RELEASED)) regVersionCombo.select(RELEASED);
+    }
+
+    const dayBefore = (date) => {
+      const d = new Date(date + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      return ymd(d);
+    };
+    const tsMd = (ts) => {
+      const d = new Date(ts * 1000);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+    const rate = (num, den) => (den ? fmtPct(pct(num, den)) : '—');
+
+    // 计划时间：开始取实际开始（没有则取计划开始）；结束取实际结束，没结束的取计划结束，都没有则只看开始那天。
+    // 不把「没结束」当成持续到现在：CTC 里很多老计划测完没点结束，会一直显示进行中
+    function planSpan(p) {
+      const s = p.actualStartTime || p.plannedStartTime;
+      if (!s) return null;
+      const e = p.actualEndTime || Math.max(p.PlannedEndTime || 0, s);
+      return { s, e, ended: !!p.actualEndTime, planned: !p.actualEndTime && p.PlannedEndTime > s };
+    }
+
+    async function loadPlans(projectId, start, end) {
+      const from = new Date(start + 'T00:00:00').getTime() / 1000;
+      const to = new Date(end + 'T23:59:59').getTime() / 1000;
+      const data = await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD });
+      const plans = (data.list || []).filter((p) => {
+        const span = planSpan(p);
+        return span && span.s <= to && span.e >= from;
+      });
+      await Promise.all(plans.map(async (p) => {
+        p.stat = await request(`/api/v1/test/plan/${p.id}/statistics`, { base: MFD }).catch(() => null);
+      }));
+      return plans;
+    }
+
+    async function runProgress() {
+      showError('');
+      const projectId = projectCombo.value;
+      const version = versionCombo.item;
+      const start = $('progStart').value;
+      const end = $('progEnd').value;
+      if (!projectId) return showError('请先选择项目');
+      if (!version) return showError('请先选择版本');
+      if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
+      saveProgressForm();
+
+      const vid = version.value;
+      const vname = version.label;
+      const pkey = projectCombo.item.pkey;
+      const reg = regVersionCombo.item || { value: RELEASED, label: '已发布版本' };
+      const period = [start, end];
+      const rows = [
+        { name: `${vname}待处理问题`, cond: `${vname} · 新创建、处理中`, f: { versions: [vid], statuses: PENDING } },
+        { name: '其中严重问题', cond: '严重、致命', f: { versions: [vid], statuses: PENDING, severities: SEVERE }, sub: true },
+        { name: '其中高优问题', cond: '优先级 最高、高', f: { versions: [vid], statuses: PENDING, priorities: HIGH_PRIORITY }, sub: true },
+        { name: '回归关闭数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: [reg.value], statuses: CLOSED, updated: period } },
+        { name: '回归打开数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: [reg.value], statuses: VALID, updated: period, regressFail: 1 } },
+        { name: '剩余回归数', cond: `${reg.label} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: [reg.value], statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] } },
+      ];
+
+      const btn = $('progBtn');
+      btn.disabled = true;
+      btn.textContent = '查询中…';
+      try {
+        const [, plans, versions] = await Promise.all([
+          Promise.all(rows.map(async (r) => { r.count = await issueCount(projectId, r.f); })),
+          loadPlans(projectId, start, end),
+          versionOptions(projectId),
+        ]);
+        const vnames = new Map(versions.map((v) => [v.id, v.vname]));
+
+        $('bugTable').innerHTML = rows.map((r) => `
+          <tr>
+            <td class="py-2 ${r.sub ? 'pl-4 text-slate-500' : 'text-slate-700'}">${esc(r.name)}</td>
+            <td class="py-2 text-slate-500">${esc(r.cond)}</td>
+            <td class="py-2 text-right"><a href="${esc(ctcListUrl(pkey, r.f))}" target="_blank" class="text-blue-600 hover:underline font-mono">${r.count}</a></td>
+          </tr>`).join('');
+
+        const planRows = plans.map((p) => {
+          const st = p.stat || {};
+          const total = st.total || 0;
+          const executed = total - (st.prepare || 0);
+          const span = planSpan(p);
+          return {
+            name: p.name,
+            version: vnames.get(p.projectVersionId) || p.projectVersionId || '—',
+            stage: PLAN_STAGE[p.stage] || p.stage || '—',
+            status: PLAN_STATUS[p.status] || p.status,
+            time: `${tsMd(span.s)}～${span.ended || span.planned ? tsMd(span.e) + (span.planned ? '（计划）' : '') : '—'}`,
+            total, pass: st.pass || 0, fail: st.fail || 0, block: st.block || 0, prepare: st.prepare || 0,
+            execRate: rate(executed, total), passRate: rate(st.pass || 0, executed),
+            noStat: !p.stat,
+          };
+        });
+        const statusColor = { 进行中: 'text-blue-600', 已完成: 'text-green-600', 未开始: 'text-slate-400' };
+        $('planTable').innerHTML = planRows.length ? planRows.map((r) => `
+          <tr>
+            <td class="py-2 pr-3 text-slate-700 whitespace-normal min-w-[12rem]">${esc(r.name)}</td>
+            <td class="py-2 pr-3 text-slate-500">${esc(r.version)}</td>
+            <td class="py-2 pr-3 text-slate-500">${esc(r.stage)}</td>
+            <td class="py-2 pr-3 ${statusColor[r.status] || 'text-slate-500'}">${esc(r.status)}</td>
+            <td class="py-2 pr-3 text-slate-500">${esc(r.time)}</td>
+            ${r.noStat ? '<td colspan="7" class="py-2 text-right text-slate-400">统计获取失败</td>' : `
+            <td class="py-2 pr-3 text-right font-mono">${r.total}</td>
+            <td class="py-2 pr-3 text-right font-mono text-green-600">${r.pass}</td>
+            <td class="py-2 pr-3 text-right font-mono ${r.fail ? 'text-red-600' : ''}">${r.fail}</td>
+            <td class="py-2 pr-3 text-right font-mono ${r.block ? 'text-amber-600' : ''}">${r.block}</td>
+            <td class="py-2 pr-3 text-right font-mono text-slate-500">${r.prepare}</td>
+            <td class="py-2 pr-3 text-right font-mono">${r.execRate}</td>
+            <td class="py-2 text-right font-mono">${r.passRate}</td>`}
+          </tr>`).join('')
+          : '<tr><td colspan="12" class="py-4 text-center text-slate-400">测试周期内没有测试计划</td></tr>';
+
+        const [pending, severe, high, closed, reopened, remain] = rows.map((r) => r.count);
+        $('progText').textContent = [
+          `版本进度（${vname}，${periodText(start, end)}）`,
+          '一、Bug 情况',
+          `1.${vname}待处理问题：${pending}（其中严重问题：${severe}，高优问题：${high}）`,
+          `2.回归关闭数：${closed}（${reg.label}）`,
+          `3.回归打开数：${reopened}`,
+          `4.剩余回归数：${remain}`,
+          '二、测试计划',
+          ...(planRows.length
+            ? planRows.map((r, i) => `${i + 1}.${r.name}（${r.status}）：` + (r.noStat ? '统计获取失败'
+              : `用例${r.total}，通过${r.pass}，失败${r.fail}，阻塞${r.block}，未执行${r.prepare}，执行率${r.execRate}，通过率${r.passRate}`))
+            : ['测试周期内没有测试计划']),
+        ].join('\n');
+        $('progResult').classList.remove('hidden');
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '查询';
+      }
+    }
+
     // ---------- 飞书登录（与 ctcmcpctl login 同一套流程） ----------
     const CTC_MCP = 'https://ctc-mcp.makeblock.com';
     let loginTimer = null;
@@ -999,9 +1273,13 @@
     });
     $('sumContent').addEventListener('input', () => { renderContentChips(); saveSummaryForm(); });
     ['sumRound', 'sumDays', 'sumManDays'].forEach((id) => $(id).addEventListener('input', saveSummaryForm));
-    initRangePicker();
+    sumPicker = createRangePicker('sum', () => refreshDaysPlaceholder());
+    progPicker = createRangePicker('prog', saveProgressForm);
     preloadHolidays();
     restoreSummaryForm();
+    restoreProgressForm();
+    $('progBtn').addEventListener('click', runProgress);
+    $('progCopyBtn').addEventListener('click', (e) => copy($('progText').textContent, e.target));
     loadProjects();
     $('copyTextBtn').addEventListener('click', (e) => copy($('reportText').textContent, e.target));
     $('copyJsonBtn').addEventListener('click', (e) => copy(JSON.stringify(lastJson, null, 2), e.target));
