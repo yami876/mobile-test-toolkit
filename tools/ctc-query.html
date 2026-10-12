@@ -40,6 +40,10 @@
     .flatpickr-day .day-tag.off { color: #fff; background: #ef4444; }
     .flatpickr-day .day-tag.work { color: #fff; background: #64748b; }
     .flatpickr-day.holiday-off:not(.selected):not(.startRange):not(.endRange):not(.inRange) { color: #ef4444; }
+    /* 未执行用例模块树 */
+    .mod-tree summary { list-style: none; }
+    .mod-tree summary::-webkit-details-marker { display: none; }
+    .mod-tree[open] > summary .caret, .mod-tree details[open] > summary .caret { transform: rotate(90deg); }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -105,6 +109,26 @@
           </div>
         </div>
       </div>
+      <!-- 版本进度、测试小结共用；版本关闭率不需要，切过去时隐藏 -->
+      <div id="periodRow" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+        <label class="block">
+          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
+          <input id="sumRange" type="text" readonly placeholder="选择日期范围"
+            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          <input id="sumStart" type="hidden" />
+          <input id="sumEnd" type="hidden" />
+        </label>
+        <div class="block">
+          <span class="text-xs text-slate-500">回归统计版本</span>
+          <div class="relative mt-1">
+            <input id="regVersionInput" type="text" autocomplete="off" placeholder="已发布版本"
+              class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
+            <div id="regVersionPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
+          </div>
+        </div>
+      </div>
+      <p id="periodHint" class="text-xs text-slate-400 mt-2">回归关闭 / 回归打开 / 剩余回归按「回归统计版本」统计，默认已发布版本；选「所有版本」则不限版本。</p>
     </section>
 
     <!-- 查询类型 Tab：新增查询时在这里加按钮，下面加同 id 的 section -->
@@ -130,7 +154,10 @@
     <section id="close-rate" class="query-section space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm text-slate-500">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题。选择版本后自动查询。</p>
-      <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+      <span class="flex items-center gap-3">
+        <span id="queryTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
+        <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+      </span>
     </div>
 
     <section id="resultSection" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
@@ -164,117 +191,21 @@
     </details>
     </section>
 
-    <!-- ============== 测试小结 ============== -->
-    <section id="summary" class="query-section hidden space-y-6">
-    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <label class="block">
-          <span class="text-xs text-slate-500">测试轮次</span>
-          <input id="sumRound" type="text" value="第一轮"
-            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-        </label>
-        <label class="block md:col-span-2">
-          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
-          <input id="sumRange" type="text" readonly placeholder="选择日期范围"
-            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-          <input id="sumStart" type="hidden" />
-          <input id="sumEnd" type="hidden" />
-        </label>
-        <div class="grid grid-cols-2 gap-2">
-          <label class="block">
-            <span class="text-xs text-slate-500">工作日</span>
-            <input id="sumDays" type="number" min="0" placeholder="自动"
-              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-          </label>
-          <label class="block">
-            <span class="text-xs text-slate-500">人天</span>
-            <input id="sumManDays" type="number" min="0" placeholder="可不填"
-              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-          </label>
-        </div>
-      </div>
-      <p id="sumDaysHint" class="text-xs text-slate-400 -mt-2"></p>
-      <label class="block">
-        <span class="text-xs text-slate-500">测试内容（点选快捷项，可在输入框里继续修改补充，多项用 + 连接）</span>
-        <div id="contentChips" class="mt-1 flex flex-wrap gap-2"></div>
-        <input id="sumContent" type="text" placeholder="点上方快捷项，或直接输入"
-          class="mt-2 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-      </label>
-      <label class="block">
-        <span class="text-xs text-slate-500">风险（可不填；不填则小结里不显示，多条风险每行一条）</span>
-        <textarea id="sumRisk" rows="2" placeholder="如：新接入设备样机不足，兼容性覆盖有限"
-          class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
-      </label>
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-slate-400">工作日不填时自动计算（扣除法定节假日、计入调休补班），也可手动填写；新增 / 遗留按问题创建时间筛选，回归关闭按更新时间筛选。</p>
-        <button id="sumBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">生成小结</button>
-      </div>
-    </section>
-
-    <section id="sumResult" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
-      <div class="flex items-center justify-between">
-        <div class="font-semibold text-slate-800">测试小结</div>
-        <button id="sumCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制小结</button>
-      </div>
-      <pre id="sumText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
-      <div>
-        <div class="text-xs text-slate-500 mb-2">数据明细（点数字在 CTC 打开对应问题列表核对）</div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm text-left">
-            <thead class="text-slate-500 border-b border-slate-200">
-              <tr><th class="py-2 font-normal">统计项</th><th class="py-2 font-normal">筛选条件</th><th class="py-2 font-normal text-right">总数</th><th class="py-2 font-normal text-right">严重（A+S）</th></tr>
-            </thead>
-            <tbody id="sumTable" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
-      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
-      <table class="mt-3 w-full text-left">
-        <tbody class="divide-y divide-slate-100">
-          <tr><td class="py-1.5 w-40 text-slate-500">当前轮次新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起</td></tr>
-          <tr><td class="py-1.5 text-slate-500">当前轮次遗留问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、挂起</td></tr>
-          <tr><td class="py-1.5 text-slate-500">当前版本共遗留问题</td><td>影响版本：所选版本；状态：新创建、处理中、挂起</td></tr>
-          <tr><td class="py-1.5 text-slate-500">主线版本共遗留问题</td><td>影响版本：已发布版本；状态：新创建、处理中、挂起</td></tr>
-          <tr><td class="py-1.5 text-slate-500">回归 Bug 关闭数</td><td>影响版本：已发布版本；更新时间在测试周期内；状态：关闭</td></tr>
-          <tr><td class="py-1.5 text-slate-500">严重 bug</td><td>严重程度：严重、致命</td></tr>
-        </tbody>
-      </table>
-    </details>
-    </section>
-
     <!-- ============== 版本进度 ============== -->
     <section id="progress" class="query-section hidden space-y-6">
-    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 items-end">
-        <label class="block">
-          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
-          <input id="progRange" type="text" readonly placeholder="选择日期范围"
-            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-          <input id="progStart" type="hidden" />
-          <input id="progEnd" type="hidden" />
-        </label>
-        <div class="block">
-          <span class="text-xs text-slate-500">回归统计版本</span>
-          <div class="relative mt-1">
-            <input id="regVersionInput" type="text" autocomplete="off" placeholder="已发布版本"
-              class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
-            <div id="regVersionPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
-          </div>
-        </div>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-slate-500">所选版本测试周期内的新增问题、当前待处理问题、回归情况，以及测试周期内该版本的测试计划执行情况和未执行用例模块。</p>
+      <span class="flex items-center gap-3">
+        <span id="progTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
         <button id="progBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
-      </div>
-      <p class="text-xs text-slate-400">待处理 / 严重 / 高优问题统计上方所选版本；回归关闭、回归打开、剩余回归统计「回归统计版本」；测试计划取时间与测试周期有重叠的计划。</p>
-    </section>
+      </span>
+    </div>
 
     <section id="progResult" class="hidden space-y-6">
       <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
         <div class="flex items-center justify-between">
           <div class="font-semibold text-slate-800">🐞 版本 Bug 情况</div>
-          <button id="progCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制文字版</button>
+          <button id="progCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制版本进度</button>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left">
@@ -307,7 +238,7 @@
       </section>
 
       <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-2">
-        <div class="text-xs text-slate-500">文字版（可直接粘贴）</div>
+        <div class="text-xs text-slate-500">版本进度文字版（可直接粘贴）</div>
         <pre id="progText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
       </section>
     </section>
@@ -316,13 +247,99 @@
       <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
       <table class="mt-3 w-full text-left">
         <tbody class="divide-y divide-slate-100">
-          <tr><td class="py-1.5 w-32 text-slate-500">待处理问题</td><td>影响版本：所选版本；状态：新创建、处理中</td></tr>
-          <tr><td class="py-1.5 text-slate-500">其中严重问题</td><td>待处理问题中，严重程度：严重、致命</td></tr>
-          <tr><td class="py-1.5 text-slate-500">其中高优问题</td><td>待处理问题中，优先级：最高、高</td></tr>
-          <tr><td class="py-1.5 text-slate-500">回归关闭数</td><td>影响版本：回归统计版本；更新时间在测试周期内；状态：关闭</td></tr>
-          <tr><td class="py-1.5 text-slate-500">回归打开数</td><td>影响版本：回归统计版本；更新时间在测试周期内；回归失败；状态：新创建、处理中、已解决、关闭、挂起</td></tr>
-          <tr><td class="py-1.5 text-slate-500">剩余回归数</td><td>影响版本：回归统计版本；更新时间在测试周期开始日之前；状态：已解决</td></tr>
-          <tr><td class="py-1.5 text-slate-500">测试计划</td><td>计划时间与测试周期有重叠：开始取实际开始（没有则取计划开始），结束取实际结束（未结束取计划结束，都没有则只看开始日期）；执行率 = 已执行 ÷ 用例总数，通过率 = 通过 ÷ 已执行</td></tr>
+          <tr><td class="py-1.5 w-32 text-slate-500">新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起；按经办人汇总数量；同样列出其中严重、高优、严重且高优问题</td></tr>
+          <tr><td class="py-1.5 text-slate-500">待处理问题</td><td>影响版本：所选版本；状态：新创建、处理中；按经办人汇总数量</td></tr>
+          <tr><td class="py-1.5 text-slate-500">其中严重问题</td><td>新增 / 待处理问题中，严重程度：严重、致命</td></tr>
+          <tr><td class="py-1.5 text-slate-500">其中高优问题</td><td>新增 / 待处理问题中，优先级：最高、高</td></tr>
+          <tr><td class="py-1.5 text-slate-500">其中严重且高优</td><td>新增 / 待处理问题中，严重程度为严重、致命，且优先级为最高、高；逐条列出</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归关闭数</td><td>影响版本：回归统计版本；更新时间在测试周期内；状态：关闭；按报告人、经办人汇总数量</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归打开数</td><td>影响版本：回归统计版本；更新时间在测试周期内；回归失败；状态：新创建、处理中、已解决、关闭、挂起；按报告人、经办人汇总数量</td></tr>
+          <tr><td class="py-1.5 text-slate-500">剩余回归数</td><td>影响版本：回归统计版本；更新时间在测试周期开始日之前；状态：已解决（即待回归），并按报告人汇总数量</td></tr>
+          <tr><td class="py-1.5 text-slate-500">测试计划</td><td>属于所选版本，且计划时间与测试周期有重叠：开始取实际开始（没有则取计划开始），结束取实际结束（未结束取计划结束，都没有则只看开始日期）；执行率 = 已执行 ÷ 用例总数，通过率 = 通过 ÷ 已执行</td></tr>
+          <tr><td class="py-1.5 text-slate-500">未执行用例模块</td><td>计划中状态为「未执行」的用例按 CTC 计划的模块树逐级汇总（可逐级展开）；执行人优先取用例上已分配的执行人，未分配时按最近的同级或上级模块里已执行用例的执行人推断（标注「推断」），都没有则为「未分配」</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
+    <!-- ============== 测试小结 ============== -->
+    <section id="summary" class="query-section hidden space-y-6">
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <label class="block">
+          <span class="text-xs text-slate-500">测试轮次</span>
+          <input id="sumRound" type="text" value="第一轮"
+            class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+        </label>
+        <div class="grid grid-cols-2 gap-2 md:col-span-2">
+          <label class="block">
+            <span class="text-xs text-slate-500">工作日（按上方测试周期自动计算）</span>
+            <input id="sumDays" type="number" min="0" placeholder="自动"
+              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">人天</span>
+            <input id="sumManDays" type="number" min="0" placeholder="可不填"
+              class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          </label>
+        </div>
+      </div>
+      <p id="sumDaysHint" class="text-xs text-slate-400 -mt-2"></p>
+      <label class="block">
+        <span class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs text-slate-500">测试内容（点选快捷项，可在输入框里继续修改补充，多项用 + 连接；为空时生成小结会按测试计划自动填写）</span>
+          <button type="button" id="contentFromPlanBtn" class="px-2 py-0.5 text-xs rounded border border-blue-300 text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-50">按测试计划生成</button>
+        </span>
+        <div id="contentChips" class="mt-1 flex flex-wrap gap-2"></div>
+        <textarea id="sumContent" rows="2" placeholder="点上方快捷项，或直接输入；可换行补充说明"
+          class="mt-2 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
+      </label>
+      <label class="block">
+        <span class="text-xs text-slate-500">风险（可不填；不填则小结里不显示，多条风险每行一条）</span>
+        <textarea id="sumRisk" rows="2" placeholder="如：新接入设备样机不足，兼容性覆盖有限"
+          class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
+      </label>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-slate-400">工作日不填时自动计算（扣除法定节假日、计入调休补班），也可手动填写；新增 / 遗留按问题创建时间筛选，回归关闭按更新时间筛选；版本 Bug 情况和测试计划在「版本进度」里查看。</p>
+        <span class="flex items-center gap-3">
+          <span id="sumTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
+          <button id="sumBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">生成小结</button>
+        </span>
+      </div>
+    </section>
+
+    <section id="sumResult" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold text-slate-800">测试小结</div>
+        <button id="sumCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制小结</button>
+      </div>
+      <pre id="sumText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      <div>
+        <div class="text-xs text-slate-500 mb-2">数据明细（点数字在 CTC 打开对应问题列表核对）</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-slate-500 border-b border-slate-200">
+              <tr><th class="py-2 font-normal">统计项</th><th class="py-2 font-normal">筛选条件</th><th class="py-2 font-normal text-right">总数</th><th class="py-2 font-normal text-right">严重（A+S）</th></tr>
+            </thead>
+            <tbody id="sumTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-40 text-slate-500">当前轮次新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">当前轮次遗留问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">当前版本共遗留问题</td><td>影响版本：所选版本；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">主线版本共遗留问题</td><td>影响版本：已发布版本；状态：新创建、处理中、挂起</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归 Bug 关闭数</td><td>影响版本：回归统计版本（默认已发布版本）；更新时间在测试周期内；状态：关闭；同时统计其中严重bug数</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归 Bug 失败数</td><td>影响版本：回归统计版本（默认已发布版本）；更新时间在测试周期内；回归失败；状态：新创建、处理中、已解决、关闭、挂起；同时统计其中严重bug数</td></tr>
+          <tr><td class="py-1.5 text-slate-500">严重 bug</td><td>严重程度：严重、致命</td></tr>
+          <tr><td class="py-1.5 text-slate-500">测试内容（自动）</td><td>按周期内所选版本的测试计划生成：计划阶段 冒烟→冒烟测试、新功能→新功能测试、系统测试→集成测试、回归→bug回归测试、开发自测→开发自测；再按计划名称关键词（冒烟、新功能、集成、回归、Fail/Block、上线）补充；周期内有回归关闭的问题时加上 bug回归测试</td></tr>
         </tbody>
       </table>
     </details>
@@ -511,6 +528,7 @@
         $('statCards').innerHTML = card(`${vname} 版本（ID ${vid}）`, cur) + card('已发布版本', rel);
         $('reportText').textContent = lines.join('\n');
         $('resultSection').classList.remove('hidden');
+        stampTime('queryTime');
       } catch (e) {
         showError(e.message);
       } finally {
@@ -676,6 +694,13 @@
       }
     }
 
+    // 数据更新时间：显示在查询 / 生成按钮旁边
+    function stampTime(id) {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      $(id).textContent = `数据更新于 ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
     async function copy(text, btn) {
       try {
         await navigator.clipboard.writeText(text);
@@ -694,13 +719,39 @@
     const CTC_WEB = 'https://ctc-next.makeblock.com';
 
     function issueBody(projectId, f) {
-      const body = { project: [projectId], versions: f.versions, issueStatus: f.statuses, pageSize: 1, pageIndex: 1 };
+      const body = { project: [projectId], issueStatus: f.statuses, pageSize: 1, pageIndex: 1 };
+      if (f.versions) body.versions = f.versions;   // 不传 = 所有版本
       if (f.created) body.createdAt = f.created;   // ['YYYY-MM-DD', 'YYYY-MM-DD']，两端都含
       if (f.updated) body.updatedAt = f.updated;
       if (f.severities) body.severity = f.severities;
       if (f.priorities) body.priority = f.priorities;
       if (f.regressFail) body.regressFail = f.regressFail;   // 只接受整数 1
+      if (f.reporters) body.reporter = f.reporters;
+      if (f.assignees) body.assignee = f.assignees;
       return body;
+    }
+
+    const PERSON_FIELD = { reporter: '报告人', assignee: '经办人' };
+    function groupPeople(issues, field) {
+      const m = new Map();
+      issues.forEach((i) => {
+        const id = i[field] || 0;
+        const g = m.get(id) || { id: i[field], name: i[field + 'Name'] || '未指派', count: 0 };
+        g.count++;
+        m.set(id, g);
+      });
+      return [...m.values()].sort((a, b) => b.count - a.count);
+    }
+
+    // 按筛选条件拉出全部问题（分页）
+    async function listIssues(projectId, f) {
+      const all = [];
+      for (let pageIndex = 1; pageIndex <= 20; pageIndex++) {
+        const data = await request('/v1/issues/list', { method: 'POST', body: { ...issueBody(projectId, f), pageSize: 500, pageIndex } });
+        all.push(...(data.list || []));
+        if (!(data.list || []).length || all.length >= data.count) break;
+      }
+      return all;
     }
 
     async function issueCount(projectId, f) {
@@ -710,13 +761,15 @@
     // 与 CTC 列表页筛选参数一致，方便点开核对
     function ctcListUrl(pkey, f) {
       const q = new URLSearchParams();
-      f.versions.forEach((v) => q.append('versions', v));
+      (f.versions || []).forEach((v) => q.append('versions', v));
       (f.created || []).forEach((d) => q.append('createdAt', d));
       (f.updated || []).forEach((d) => q.append('updatedAt', d));
       f.statuses.forEach((s) => q.append('issueStatus', s));
       (f.severities || []).forEach((s) => q.append('severity', s));
       (f.priorities || []).forEach((s) => q.append('priority', s));
       if (f.regressFail) q.append('regressFail', f.regressFail);
+      (f.reporters || []).forEach((u) => q.append('reporter', u));
+      (f.assignees || []).forEach((u) => q.append('assignee', u));
       return `${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/issue/list?${q}`;
     }
 
@@ -760,9 +813,13 @@
       : `${start.slice(0, 4)}/${md(start)}～${end.slice(0, 4)}/${md(end)}`;
 
     function saveSummaryForm() {
+      let prev = {};
+      try { prev = JSON.parse(store.get(SUMMARY_KEY) || '{}'); } catch (e) {}
       store.set(SUMMARY_KEY, JSON.stringify({
         round: $('sumRound').value, start: $('sumStart').value, end: $('sumEnd').value,
         days: $('sumDays').value, manDays: $('sumManDays').value, content: $('sumContent').value, risk: $('sumRisk').value,
+        // 版本列表还没加载完时下拉框是空的，别把上次选的回归统计版本冲掉
+        regVersion: regVersionCombo.value || prev.regVersion || '',
       }));
     }
 
@@ -873,7 +930,16 @@
 
     // ---------- 测试内容快捷项：点一下加入，再点一下移除；输入框可自由修改 ----------
     const CONTENT_PRESETS = ['冒烟测试', '新功能测试', '集成测试', 'bug回归测试', 'Fail/Block用例执行', '上线前测试'];
-    const contentParts = () => $('sumContent').value.split('+').map((x) => x.trim()).filter(Boolean);
+    // 测试内容支持多行：第一行是「+」连接的快捷项，后面的行是补充说明，原样输出
+    const contentLines = () => $('sumContent').value.split('\n');
+    const firstLineParts = () => contentLines()[0].split('+').map((x) => x.trim()).filter(Boolean);
+    // 用来判断快捷项是否已选、内容是否为空：所有行里「+」分隔的片段
+    const contentParts = () => $('sumContent').value.split(/[+\n]/).map((x) => x.trim()).filter(Boolean);
+    const contentText = () => contentLines().map((x) => x.trimEnd()).filter((x) => x.trim()).join('\n');
+    function setFirstLine(parts) {
+      const rest = contentLines().slice(1);
+      $('sumContent').value = [parts.join('+'), ...rest].join('\n').replace(/\n+$/, '');
+    }
 
     function renderContentChips() {
       const parts = contentParts();
@@ -886,13 +952,74 @@
     }
 
     function toggleContent(name) {
-      const parts = contentParts();
-      const i = parts.indexOf(name);
-      if (i >= 0) parts.splice(i, 1);
-      else parts.push(name);
-      $('sumContent').value = parts.join('+');
+      if (contentParts().includes(name)) {
+        // 从所在的行里去掉这一项
+        $('sumContent').value = contentLines()
+          .map((line) => line.split('+').filter((x) => x.trim() !== name).join('+'))
+          .join('\n');
+      } else {
+        setFirstLine([...firstLineParts(), name]);
+      }
       renderContentChips();
+      refreshContentLine();
       saveSummaryForm();
+    }
+
+    // 按测试计划生成测试内容：计划阶段 + 计划名称关键词；周期内有回归关闭的问题时加上 bug回归测试
+    const STAGE_CONTENT = { smoke: '冒烟测试', newfeature: '新功能测试', system: '集成测试', regression: 'bug回归测试', selftest: '开发自测' };
+    const NAME_CONTENT = [
+      [/冒烟/, '冒烟测试'], [/新功能/, '新功能测试'], [/集成/, '集成测试'], [/回归/, 'bug回归测试'],
+      [/fail|block/i, 'Fail/Block用例执行'], [/上线/, '上线前测试'],
+    ];
+    function contentFromPlans(plans, regressionClosed) {
+      const found = new Set();
+      plans.forEach((p) => {
+        if (STAGE_CONTENT[p.stage]) found.add(STAGE_CONTENT[p.stage]);
+        NAME_CONTENT.forEach(([re, label]) => { if (re.test(p.name || '')) found.add(label); });
+      });
+      if (regressionClosed > 0) found.add('bug回归测试');
+      const ordered = CONTENT_PRESETS.filter((x) => found.has(x));
+      return [...ordered, ...[...found].filter((x) => !ordered.includes(x))];
+    }
+
+    function setContent(parts) {
+      setFirstLine(parts);   // 只替换第一行，手写的补充说明保留
+      renderContentChips();
+      refreshContentLine();
+      saveSummaryForm();
+    }
+
+    async function fillContentFromPlans() {
+      showError('');
+      const projectId = projectCombo.value;
+      const version = versionCombo.item;
+      const start = $('sumStart').value;
+      const end = $('sumEnd').value;
+      if (!projectId || !version) return showError('请先选择项目和版本');
+      if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
+      const btn = $('contentFromPlanBtn');
+      btn.disabled = true;
+      try {
+        const reg = regVersionCombo.item || { value: RELEASED };
+        const [plans, closed] = await Promise.all([
+          loadPlans(projectId, version.value, start, end, false),
+          issueCount(projectId, { versions: regVersions(reg), statuses: CLOSED, updated: [start, end] }),
+        ]);
+        const parts = contentFromPlans(plans, closed);
+        if (!parts.length) return showError(`${version.label} 在测试周期内没有测试计划，无法自动生成测试内容`);
+        setContent(parts);
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // 小结已生成时，测试内容改了同步更新第 3 项
+    function refreshContentLine() {
+      if (!summaryLines) return;
+      summaryLines[2] = `3.测试内容：${contentText() || '—'}`;
+      renderSummaryText();
     }
 
     let summaryLines = null;   // 最近一次生成的 1~8 项
@@ -924,25 +1051,40 @@
       const vname = version.label;
       const pkey = projectCombo.item.pkey;
       const created = [start, end];
+      const reg = regVersionCombo.item || { value: RELEASED, label: '已发布版本' };
       const rows = [
         { no: 4, name: '当前轮次新增问题', f: { versions: [vid], statuses: VALID, created }, severe: true },
         { no: 5, name: '当前轮次遗留问题', f: { versions: [vid], statuses: OPEN, created }, severe: true },
         { no: 6, name: `${vname}版本共遗留问题`, f: { versions: [vid], statuses: OPEN }, severe: true },
         { no: 7, name: '主线版本共遗留问题', f: { versions: [RELEASED], statuses: OPEN }, severe: true },
-        { no: 8, name: '回归Bug关闭数', f: { versions: [RELEASED], statuses: CLOSED, updated: created }, severe: false },
+        { no: 8, name: '回归Bug关闭数', f: { versions: regVersions(reg), statuses: CLOSED, updated: created }, severe: true },
+        { no: 9, name: '回归Bug失败数', f: { versions: regVersions(reg), statuses: VALID, updated: created, regressFail: 1 }, severe: true },
       ];
 
       const btn = $('sumBtn');
       btn.disabled = true;
       btn.textContent = '统计中…';
       try {
-        await Promise.all(rows.map(async (r) => {
-          r.sf = { ...r.f, severities: SEVERE };
-          [r.total, r.severeCount] = await Promise.all([
-            issueCount(projectId, r.f),
-            r.severe ? issueCount(projectId, r.sf) : Promise.resolve(null),
-          ]);
-        }));
+        const needContent = !contentParts().length;
+        const [, plans] = await Promise.all([
+          Promise.all(rows.map(async (r) => {
+            r.sf = { ...r.f, severities: SEVERE };
+            [r.total, r.severeCount] = await Promise.all([
+              issueCount(projectId, r.f),
+              r.severe ? issueCount(projectId, r.sf) : Promise.resolve(null),
+            ]);
+          })),
+          needContent ? loadPlans(projectId, vid, start, end, false) : Promise.resolve([]),
+        ]);
+        // 测试内容为空时，按测试计划自动填
+        if (needContent) {
+          const parts = contentFromPlans(plans, rows.find((r) => r.no === 8).total);
+          if (parts.length) {
+            $('sumContent').value = parts.join('+');
+            renderContentChips();
+            saveSummaryForm();
+          }
+        }
 
         const days = $('sumDays').value || (await workdays(start, end)).days;
         const manDays = $('sumManDays').value;
@@ -950,17 +1092,17 @@
         summaryLines = [
           `1.测试版本：${vname}${round ? '-' + round : ''}`,
           `2.测试时间：${periodText(start, end)}，${days}d${manDays ? `（共${manDays}人天）` : ''}`,
-          `3.测试内容：${contentParts().join('+') || '—'}`,
+          `3.测试内容：${contentText() || '—'}`,
           ...rows.map((r) => `${r.no}.${r.name}：${r.total}${r.severe ? `（其中严重bug数：${r.severeCount}）` : ''}`),
         ];
         renderSummaryText();
 
         const link = (url, n) => `<a href="${esc(url)}" target="_blank" class="text-blue-600 hover:underline font-mono">${n}</a>`;
         const cond = (f) => [
-          f.versions[0] === RELEASED ? '已发布版本' : vname,
+          !f.versions ? '所有版本' : f.versions[0] === RELEASED ? '已发布版本' : f.versions[0] === vid ? vname : reg.label,
           f.created ? `创建 ${md(start)}～${md(end)}` : '',
           f.updated ? `更新 ${md(start)}～${md(end)}` : '',
-          f.statuses === OPEN ? '未关闭' : f.statuses === CLOSED ? '已关闭' : '有效',
+          f.regressFail ? '回归失败' : f.statuses === OPEN ? '未关闭' : f.statuses === CLOSED ? '已关闭' : '有效',
         ].filter(Boolean).join(' · ');
         $('sumTable').innerHTML = rows.map((r) => `
           <tr>
@@ -970,6 +1112,7 @@
             <td class="py-2 text-right">${r.severe ? link(ctcListUrl(pkey, r.sf), r.severeCount) : '<span class="text-slate-300">—</span>'}</td>
           </tr>`).join('');
         $('sumResult').classList.remove('hidden');
+        stampTime('sumTime');
       } catch (e) {
         showError(e.message);
       } finally {
@@ -982,33 +1125,20 @@
     const PENDING = [1, 3];               // 待处理：新创建、处理中
     const HIGH_PRIORITY = [1, 2];         // 高优：最高、高
     const RESOLVED = [5];                 // 已解决
-    const PROGRESS_KEY = 'ctc-query.progress';
     const PLAN_STATUS = { Prepare: '未开始', Underway: '进行中', Done: '已完成' };
     const PLAN_STAGE = { smoke: '冒烟', newfeature: '新功能', system: '系统测试', regression: '回归', selftest: '开发自测' };
 
-    let progPicker = null;
-    const regVersionCombo = createCombo('regVersion', saveProgressForm);
+    const regVersionCombo = createCombo('regVersion', () => saveSummaryForm());
 
-    function saveProgressForm() {
-      store.set(PROGRESS_KEY, JSON.stringify({
-        start: $('progStart').value, end: $('progEnd').value, regVersion: regVersionCombo.value,
-      }));
-    }
-
-    function restoreProgressForm() {
-      let saved = {};
-      try { saved = JSON.parse(store.get(PROGRESS_KEY) || '{}'); } catch (e) {}
-      // 没查过版本进度时，默认沿用测试小结的周期
-      const start = saved.start || $('sumStart').value;
-      const end = saved.end || $('sumEnd').value;
-      if (start && end) progPicker.set(start, end);
-    }
+    const ALL_VERSIONS = 'all';   // 回归统计版本选「所有版本」时不加版本条件
+    const regVersions = (reg) => (reg.value === ALL_VERSIONS ? undefined : [reg.value]);
 
     function fillRegVersionList(list) {
       let saved = {};
-      try { saved = JSON.parse(store.get(PROGRESS_KEY) || '{}'); } catch (e) {}
+      try { saved = JSON.parse(store.get(SUMMARY_KEY) || '{}'); } catch (e) {}
       regVersionCombo.setItems([
         { value: RELEASED, label: '已发布版本', sub: '默认' },
+        { value: ALL_VERSIONS, label: '所有版本', sub: '不限版本' },
         ...list.map((v) => ({ value: v.id, label: v.vname || String(v.id), sub: v.released ? '' : '未发布' })),
       ], '可输入版本号筛选');
       if (!regVersionCombo.select(saved.regVersion || RELEASED)) regVersionCombo.select(RELEASED);
@@ -1034,62 +1164,265 @@
       return { s, e, ended: !!p.actualEndTime, planned: !p.actualEndTime && p.PlannedEndTime > s };
     }
 
-    async function loadPlans(projectId, start, end) {
+    async function loadPlans(projectId, versionId, start, end, details = true) {
       const from = new Date(start + 'T00:00:00').getTime() / 1000;
       const to = new Date(end + 'T23:59:59').getTime() / 1000;
       const data = await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD });
       const plans = (data.list || []).filter((p) => {
         const span = planSpan(p);
-        return span && span.s <= to && span.e >= from;
+        return p.projectVersionId === versionId && span && span.s <= to && span.e >= from;
       });
+      if (!details) return plans;
       await Promise.all(plans.map(async (p) => {
         p.stat = await request(`/api/v1/test/plan/${p.id}/statistics`, { base: MFD }).catch(() => null);
+        if (p.stat && p.stat.prepare > 0) {
+          p.modules = await loadPlanModules(p.id).catch(() => null);
+        }
       }));
       return plans;
     }
+
+    // 计划关联的全部用例（分页拉完）
+    async function loadPlanCases(planId) {
+      const SIZE = 1000;
+      const all = [];
+      for (let page = 1; page <= 50; page++) {
+        const data = await request(`/api/v1/test/plan/${planId}/related/case?page=${page}&size=${SIZE}`, { base: MFD });
+        const list = data.list || [];
+        all.push(...list);
+        if (!list.length || all.length >= (data.total || 0)) break;
+      }
+      return all;
+    }
+
+    // 计划的未执行用例模块树（用 CTC 计划自带的模块树，不按 nodePath 拆：模块名里可能带「/」）
+    async function loadPlanModules(planId) {
+      const [cases, tree] = await Promise.all([
+        loadPlanCases(planId),
+        request(`/api/v1/test/node/plan/list/${planId}`, { base: MFD }),
+      ]);
+      return pendingModuleTree(cases, tree || []);
+    }
+
+    // 返回 { top, path }：top 是所有未执行用例的最近公共上级模块，path 是它的完整路径
+    // 每个节点：total 子树内未执行条数；exec 子树内执行人汇总
+    // 执行人：用例已分配的直接用；没分配的，用最近的（同级或上级）模块里已执行用例的执行人推断，
+    // 最多往上找到 top 的下一级（团队在 CTC 里一般执行时才记执行人，未执行用例的执行人字段大多为空）
+    function pendingModuleTree(cases, tree) {
+      const byId = new Map();
+      const make = (n, parent) => {
+        const node = { id: n.id, name: n.name, parent, children: [], pending: 0, assigned: new Set(), executed: new Set() };
+        byId.set(n.id, node);
+        node.children = (n.children || []).map((c) => make(c, node));
+        return node;
+      };
+      const root = { name: '', parent: null, children: [], pending: 0, assigned: new Set(), executed: new Set() };
+      root.children = tree.map((n) => make(n, root));
+      let orphan = null;   // 模块树里找不到的用例
+      cases.forEach((c) => {
+        let node = byId.get(c.nodeId);
+        if (!node) {
+          if (!orphan) {
+            orphan = { name: '（未分模块）', parent: root, children: [], pending: 0, assigned: new Set(), executed: new Set() };
+            root.children.push(orphan);
+          }
+          node = orphan;
+        }
+        if (c.status === 'Prepare') {
+          node.pending++;
+          if (c.executorName) node.assigned.add(c.executorName);
+        } else if (c.executorName) {
+          node.executed.add(c.executorName);
+        }
+      });
+
+      // executedAll 要包含被剪掉的分支（那里有已执行用例），所以先算 executedAll 再剪
+      const collectExecuted = (n) => {
+        n.children.forEach(collectExecuted);
+        n.executedAll = new Set(n.executed);
+        n.children.forEach((c) => c.executedAll.forEach((x) => n.executedAll.add(x)));
+      };
+      collectExecuted(root);
+      const prune = (n) => {
+        n.children.forEach(prune);
+        n.children = n.children.filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
+        n.total = n.pending + n.children.reduce((s, c) => s + c.total, 0);
+      };
+      prune(root);
+
+      let top = root;
+      while (top.pending === 0 && top.children.length === 1) top = top.children[0];
+
+      const inferFor = (node) => {
+        for (let a = node; a; a = a.parent) {
+          if (a === top && a !== node) break;
+          if (a.executedAll.size) return a.executedAll;
+        }
+        return null;
+      };
+      // 每个节点的执行人汇总：names 人名，inferred 含推断，assigned 含真实分配，unassigned 含未分配
+      const execOf = (n) => {
+        const info = { names: new Set(), inferred: false, assigned: false, unassigned: false };
+        if (n.pending) {
+          const inferred = !n.assigned.size && inferFor(n);
+          const names = n.assigned.size ? n.assigned : inferred;
+          if (names) names.forEach((x) => info.names.add(x));
+          if (n.assigned.size) info.assigned = true;
+          else if (inferred) info.inferred = true;
+          else info.unassigned = true;
+        }
+        n.children.forEach((c) => {
+          const ci = execOf(c);
+          ci.names.forEach((x) => info.names.add(x));
+          info.inferred = info.inferred || ci.inferred;
+          info.assigned = info.assigned || ci.assigned;
+          info.unassigned = info.unassigned || ci.unassigned;
+        });
+        n.exec = info;
+        return info;
+      };
+      execOf(top);
+
+      const path = [];
+      for (let a = top; a && a !== root; a = a.parent) path.unshift(a.name);
+      return { top, path };
+    }
+
+    function execLabel(info) {
+      if (!info.names.size) return '未分配';
+      return [...info.names].join('、')
+        + (info.inferred ? (info.assigned ? '（部分推断）' : '（推断）') : '')
+        + (info.unassigned ? '，部分未分配' : '');
+    }
+
+    // 只有一个子模块、自身又没有用例的链条合并成一行：设备设置 / 固件升级
+    function chainOf(n) {
+      const names = [n.name];
+      while (n.pending === 0 && n.children.length === 1) {
+        n = n.children[0];
+        names.push(n.name);
+      }
+      return { label: names.join(' / '), node: n };
+    }
+
+    const countLeaves = (n) => (n.children.length ? n.children.reduce((s, c) => s + countLeaves(c), 0) + (n.pending ? 1 : 0) : 1);
+
+    function moduleTreeHtml(n, depth) {
+      const { label, node } = chainOf(n);
+      const info = node.exec;
+      const execCls = !info.names.size ? 'text-amber-600' : info.inferred && !info.assigned ? 'text-slate-400' : 'text-slate-600';
+      const cells = (caret) => `
+        <span class="flex items-start gap-1 min-w-0" style="padding-left:${depth * 16}px">
+          <span class="caret inline-block w-3 shrink-0 text-slate-400 transition-transform">${caret ? '▸' : ''}</span>
+          <span class="text-slate-700 break-all">${esc(label)}</span>
+        </span>
+        <span class="text-right font-mono">${n.total}</span>
+        <span class="${execCls}">${esc(execLabel(info))}</span>`;
+      const row = 'grid grid-cols-[1fr_3.5rem_minmax(6rem,12rem)] gap-3 py-1 border-b border-slate-200/70';
+      if (!node.children.length) return `<div class="${row}">${cells(false)}</div>`;
+      const self = node.pending
+        ? `<div class="${row}"><span class="text-slate-400" style="padding-left:${(depth + 1) * 16 + 16}px">（本模块直属用例）</span>`
+          + `<span class="text-right font-mono">${node.pending}</span><span></span></div>`
+        : '';
+      return `<details class="mod-node"><summary class="${row} cursor-pointer hover:bg-slate-100">${cells(true)}</summary>`
+        + self + node.children.map((c) => moduleTreeHtml(c, depth + 1)).join('') + '</details>';
+    }
+
 
     async function runProgress() {
       showError('');
       const projectId = projectCombo.value;
       const version = versionCombo.item;
-      const start = $('progStart').value;
-      const end = $('progEnd').value;
+      const start = $('sumStart').value;
+      const end = $('sumEnd').value;
       if (!projectId) return showError('请先选择项目');
       if (!version) return showError('请先选择版本');
       if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
-      saveProgressForm();
-
-      const vid = version.value;
-      const vname = version.label;
-      const pkey = projectCombo.item.pkey;
-      const reg = regVersionCombo.item || { value: RELEASED, label: '已发布版本' };
-      const period = [start, end];
-      const rows = [
-        { name: `${vname}待处理问题`, cond: `${vname} · 新创建、处理中`, f: { versions: [vid], statuses: PENDING } },
-        { name: '其中严重问题', cond: '严重、致命', f: { versions: [vid], statuses: PENDING, severities: SEVERE }, sub: true },
-        { name: '其中高优问题', cond: '优先级 最高、高', f: { versions: [vid], statuses: PENDING, priorities: HIGH_PRIORITY }, sub: true },
-        { name: '回归关闭数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: [reg.value], statuses: CLOSED, updated: period } },
-        { name: '回归打开数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: [reg.value], statuses: VALID, updated: period, regressFail: 1 } },
-        { name: '剩余回归数', cond: `${reg.label} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: [reg.value], statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] } },
-      ];
-
+      if (start > end) return showError('开始日期不能晚于结束日期');
+      saveSummaryForm();
       const btn = $('progBtn');
       btn.disabled = true;
       btn.textContent = '查询中…';
       try {
+        await loadProgress({
+          projectId, vid: version.value, vname: version.label, pkey: projectCombo.item.pkey, start, end,
+          reg: regVersionCombo.item || { value: RELEASED, label: '已发布版本' },
+        });
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '查询';
+      }
+    }
+
+    // 版本 Bug 情况 + 测试计划情况：查询并渲染
+    async function loadProgress({ projectId, vid, vname, pkey, start, end, reg }) {
+      const period = [start, end];
+      // 一组问题：总数（按经办人汇总）+ 其中严重 / 高优 / 严重且高优（逐条列出）
+      const issueBlock = (key, name, cond, f) => [
+        { key, name, cond, f, groupBy: ['assignee'] },
+        { key: key + 'Severe', name: '其中严重问题', cond: '严重、致命', f: { ...f, severities: SEVERE }, sub: true },
+        { key: key + 'High', name: '其中高优问题', cond: '优先级 最高、高', f: { ...f, priorities: HIGH_PRIORITY }, sub: true },
+        { key: key + 'Critical', name: '其中严重且高优问题', cond: '严重、致命 且 优先级 最高、高', f: { ...f, severities: SEVERE, priorities: HIGH_PRIORITY }, sub: true, critical: true },
+      ];
+      const rows = [
+        ...issueBlock('created', `${vname}新增问题`, `${vname} · 创建 ${md(start)}～${md(end)} · 有效`, { versions: [vid], statuses: VALID, created: period }),
+        ...issueBlock('pending', `${vname}待处理问题`, `${vname} · 新创建、处理中`, { versions: [vid], statuses: PENDING }),
+        { key: 'closed', name: '回归关闭数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
+        { key: 'reopened', name: '回归打开数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
+        { key: 'remain', name: '剩余回归数', cond: `${reg.label} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: regVersions(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] }, groupBy: ['reporter'] },
+      ];
+
+      {
         const [, plans, versions] = await Promise.all([
           Promise.all(rows.map(async (r) => { r.count = await issueCount(projectId, r.f); })),
-          loadPlans(projectId, start, end),
+          loadPlans(projectId, vid, start, end),
           versionOptions(projectId),
+          Promise.all(rows.filter((r) => r.critical).map(async (r) => {
+            r.issues = (await request('/v1/issues/list', { method: 'POST', body: { ...issueBody(projectId, r.f), pageSize: 100 } })).list || [];
+          })),
+          // 需要按人汇总的行，拉出问题明细后按报告人 / 经办人分组，数量多的在前
+          Promise.all(rows.filter((r) => r.groupBy).map(async (r) => {
+            const issues = await listIssues(projectId, r.f);
+            r.groups = r.groupBy.map((field) => ({ field, people: groupPeople(issues, field) }));
+          })),
         ]);
         const vnames = new Map(versions.map((v) => [v.id, v.vname]));
 
-        $('bugTable').innerHTML = rows.map((r) => `
+        const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
+        const criticalHtml = (r) => (r.issues || []).length ? `
+          <tr><td colspan="3" class="pb-3 pt-0">
+            <div class="ml-4 rounded-lg border border-red-100 bg-red-50/50 divide-y divide-red-100 text-xs">${r.issues.map((i) => `
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                <a href="${CTC_WEB}/#/issue/detail/${encodeURIComponent(issueKey(i))}" target="_blank" class="font-mono text-blue-600 hover:underline">${esc(issueKey(i))}</a>
+                <span class="flex-1 min-w-[12rem] text-slate-700">${esc(i.summary)}</span>
+                <span class="text-slate-500">${esc(i.issueStatusName || '')}</span>
+                <span class="text-red-600">${esc(i.severityName || '')}</span>
+                <span class="text-amber-600">${esc(i.priorityName || '')}优先级</span>
+                <span class="text-slate-500">经办人：${esc(i.assigneeName || '未指派')}</span>
+              </div>`).join('')}
+            </div>
+          </td></tr>` : '';
+        // 人员明细默认收起，点统计项旁的「经办人 ▸」展开
+        const peopleGroups = (r) => (r.groups || []).filter((g) => g.people.length);
+        const groupHtml = (r, i) => peopleGroups(r).map((g) => `
+          <tr class="hidden" data-people-of="${i}"><td colspan="3" class="pb-2 pt-0">
+            <div class="ml-4 flex items-start gap-2 text-xs">
+              <span class="text-slate-400 w-12 shrink-0 pt-0.5">${PERSON_FIELD[g.field]}</span>
+              <div class="flex flex-wrap gap-2">${g.people.map((u) => `
+              <a href="${esc(ctcListUrl(pkey, { ...r.f, [g.field + 's']: u.id ? [u.id] : undefined }))}" target="_blank"
+                class="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-400 hover:text-blue-600">${esc(u.name)} <span class="font-mono text-blue-600">${u.count}</span></a>`).join('')}
+              </div>
+            </div>
+          </td></tr>`).join('');
+        $('bugTable').innerHTML = rows.map((r, i) => `
           <tr>
-            <td class="py-2 ${r.sub ? 'pl-4 text-slate-500' : 'text-slate-700'}">${esc(r.name)}</td>
+            <td class="py-2 ${r.sub ? 'pl-4' : ''} ${r.critical ? 'text-red-600 font-medium' : r.sub ? 'text-slate-500' : 'text-slate-700'}">${esc(r.name)}${peopleGroups(r).length ? `
+              <button type="button" data-people="${i}" class="ml-2 px-1.5 py-0.5 rounded text-xs font-normal text-blue-600 hover:bg-blue-50">${peopleGroups(r).map((g) => PERSON_FIELD[g.field]).join('/')} <span class="arrow">▸</span></button>` : ''}</td>
             <td class="py-2 text-slate-500">${esc(r.cond)}</td>
             <td class="py-2 text-right"><a href="${esc(ctcListUrl(pkey, r.f))}" target="_blank" class="text-blue-600 hover:underline font-mono">${r.count}</a></td>
-          </tr>`).join('');
+          </tr>${r.critical ? criticalHtml(r) : ''}${groupHtml(r, i)}`).join('');
 
         const planRows = plans.map((p) => {
           const st = p.stat || {};
@@ -1098,6 +1431,8 @@
           const span = planSpan(p);
           return {
             name: p.name,
+            // CTC 计划详情页：/project/<项目代号>/dev/test-plan/test-plan-detail/<项目ID>/<版本ID>/<计划ID>
+            url: `${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/dev/test-plan/test-plan-detail/${projectId}/${p.projectVersionId}/${p.id}`,
             version: vnames.get(p.projectVersionId) || p.projectVersionId || '—',
             stage: PLAN_STAGE[p.stage] || p.stage || '—',
             status: PLAN_STATUS[p.status] || p.status,
@@ -1105,12 +1440,41 @@
             total, pass: st.pass || 0, fail: st.fail || 0, block: st.block || 0, prepare: st.prepare || 0,
             execRate: rate(executed, total), passRate: rate(st.pass || 0, executed),
             noStat: !p.stat,
+            modules: p.modules,
+            modulesFailed: !!(p.stat && p.stat.prepare > 0 && !p.modules),
           };
         });
         const statusColor = { 进行中: 'text-blue-600', 已完成: 'text-green-600', 未开始: 'text-slate-400' };
+        const moduleRow = (r) => {
+          if (r.modulesFailed) return '<tr><td colspan="12" class="pb-3 text-xs text-slate-400">未执行用例模块获取失败</td></tr>';
+          if (!r.modules || !r.modules.top.total) return '';
+          const { top, path } = r.modules;
+          const firstLevel = top.children.length;
+          return `
+          <tr><td colspan="12" class="pb-3 pt-0 whitespace-normal">
+            <details class="mod-tree bg-slate-50 rounded-lg px-3 py-2 text-xs">
+              <summary class="cursor-pointer text-slate-600 flex flex-wrap items-center gap-x-2">
+                <span class="caret inline-block text-slate-400 transition-transform">▸</span>
+                <span>未执行用例模块：${firstLevel || 1} 个一级模块 / ${countLeaves(top)} 个末级模块 / ${top.total} 条</span>
+                ${path.length ? `<span class="text-slate-400">（公共路径：${esc(path.join(' / '))}）</span>` : ''}
+              </summary>
+              <div class="mt-2 flex gap-2">
+                <button type="button" data-tree-act="open" class="px-2 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400">全部展开</button>
+                <button type="button" data-tree-act="close" class="px-2 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400">全部收起</button>
+              </div>
+              <div class="mt-2 max-h-96 overflow-y-auto">
+                <div class="grid grid-cols-[1fr_3.5rem_minmax(6rem,12rem)] gap-3 py-1 text-slate-400 border-b border-slate-200 sticky top-0 bg-slate-50 z-10">
+                  <span>模块</span><span class="text-right">未执行</span><span>执行人</span>
+                </div>
+                ${top.pending && top.children.length ? `<div class="grid grid-cols-[1fr_3.5rem_minmax(6rem,12rem)] gap-3 py-1 border-b border-slate-200/70"><span class="text-slate-400 pl-4">（公共路径下直属用例）</span><span class="text-right font-mono">${top.pending}</span><span></span></div>` : ''}
+                ${top.children.length ? top.children.map((c) => moduleTreeHtml(c, 0)).join('') : moduleTreeHtml(top, 0)}
+              </div>
+            </details>
+          </td></tr>`;
+        };
         $('planTable').innerHTML = planRows.length ? planRows.map((r) => `
           <tr>
-            <td class="py-2 pr-3 text-slate-700 whitespace-normal min-w-[12rem]">${esc(r.name)}</td>
+            <td class="py-2 pr-3 whitespace-normal min-w-[12rem]"><a href="${esc(r.url)}" target="_blank" class="text-blue-600 hover:underline">${esc(r.name)}</a></td>
             <td class="py-2 pr-3 text-slate-500">${esc(r.version)}</td>
             <td class="py-2 pr-3 text-slate-500">${esc(r.stage)}</td>
             <td class="py-2 pr-3 ${statusColor[r.status] || 'text-slate-500'}">${esc(r.status)}</td>
@@ -1123,29 +1487,53 @@
             <td class="py-2 pr-3 text-right font-mono text-slate-500">${r.prepare}</td>
             <td class="py-2 pr-3 text-right font-mono">${r.execRate}</td>
             <td class="py-2 text-right font-mono">${r.passRate}</td>`}
-          </tr>`).join('')
-          : '<tr><td colspan="12" class="py-4 text-center text-slate-400">测试周期内没有测试计划</td></tr>';
+          </tr>${moduleRow(r)}`).join('')
+          : `<tr><td colspan="12" class="py-4 text-center text-slate-400">${esc(vname)} 在测试周期内没有测试计划</td></tr>`;
 
-        const [pending, severe, high, closed, reopened, remain] = rows.map((r) => r.count);
+        const R = Object.fromEntries(rows.map((r) => [r.key, r]));
+        // 每个分组单独一行：   报告人：张三3，李四2
+        const groupLines = (r) => (r.groups || []).filter((g) => g.people.length)
+          .map((g) => `   ${PERSON_FIELD[g.field]}：${g.people.map((u) => `${u.name}${u.count}`).join('，')}`);
+        const blockLines = (no, key) => [
+          `${no}.${R[key].name}：${R[key].count}（其中严重问题：${R[key + 'Severe'].count}，高优问题：${R[key + 'High'].count}，严重且高优问题：${R[key + 'Critical'].count}）`,
+          ...groupLines(R[key]),
+          ...(R[key + 'Critical'].issues || []).map((i) => `   - ${issueKey(i)} ${i.summary}（${i.issueStatusName}，${i.severityName}，${i.priorityName}优先级，经办人：${i.assigneeName || '未指派'}）`),
+        ];
+        const moduleLines = (r) => {
+          if (!r.modules || !r.modules.top.total) return [];
+          const { top, path } = r.modules;
+          const firsts = top.children.length ? top.children : [top];
+          return [
+            `   未执行用例模块${path.length ? `（${path.join('/')}）` : ''}：`,
+            ...firsts.map((n) => {
+              const { label, node } = chainOf(n);
+              return `   - ${label}：${n.total}条，执行人：${execLabel(node.exec)}`;
+            }),
+          ];
+        };
         $('progText').textContent = [
           `版本进度（${vname}，${periodText(start, end)}）`,
           '一、Bug 情况',
-          `1.${vname}待处理问题：${pending}（其中严重问题：${severe}，高优问题：${high}）`,
-          `2.回归关闭数：${closed}（${reg.label}）`,
-          `3.回归打开数：${reopened}`,
-          `4.剩余回归数：${remain}`,
+          ...blockLines(1, 'created'),
+          ...blockLines(2, 'pending'),
+          `3.回归关闭数：${R.closed.count}（${reg.label}）`,
+          ...groupLines(R.closed),
+          `4.回归打开数：${R.reopened.count}`,
+          ...groupLines(R.reopened),
+          `5.剩余回归数：${R.remain.count}`,
+          ...groupLines(R.remain),
           '二、测试计划',
           ...(planRows.length
-            ? planRows.map((r, i) => `${i + 1}.${r.name}（${r.status}）：` + (r.noStat ? '统计获取失败'
-              : `用例${r.total}，通过${r.pass}，失败${r.fail}，阻塞${r.block}，未执行${r.prepare}，执行率${r.execRate}，通过率${r.passRate}`))
-            : ['测试周期内没有测试计划']),
+            ? planRows.flatMap((r, i) => [
+              `${i + 1}.${r.name}（${r.status}）：` + (r.noStat ? '统计获取失败'
+                : `用例${r.total}，通过${r.pass}，失败${r.fail}，阻塞${r.block}，未执行${r.prepare}，执行率${r.execRate}，通过率${r.passRate}`),
+              ...moduleLines(r),
+            ])
+            : [`${vname}在测试周期内没有测试计划`]),
         ].join('\n');
         $('progResult').classList.remove('hidden');
-      } catch (e) {
-        showError(e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '查询';
+        stampTime('progTime');
+        return plans;
       }
     }
 
@@ -1265,20 +1653,33 @@
     });
     $('queryBtn').addEventListener('click', runQuery);
     $('sumBtn').addEventListener('click', runSummary);
+    $('progBtn').addEventListener('click', runProgress);
     $('sumCopyBtn').addEventListener('click', (e) => copy($('sumText').textContent, e.target));
     $('sumRisk').addEventListener('input', () => { renderSummaryText(); saveSummaryForm(); });
     $('contentChips').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-name]');
       if (btn) toggleContent(btn.dataset.name);
     });
-    $('sumContent').addEventListener('input', () => { renderContentChips(); saveSummaryForm(); });
+    $('sumContent').addEventListener('input', () => { renderContentChips(); refreshContentLine(); saveSummaryForm(); });
+    $('contentFromPlanBtn').addEventListener('click', (e) => { e.preventDefault(); fillContentFromPlans(); });
     ['sumRound', 'sumDays', 'sumManDays'].forEach((id) => $(id).addEventListener('input', saveSummaryForm));
     sumPicker = createRangePicker('sum', () => refreshDaysPlaceholder());
-    progPicker = createRangePicker('prog', saveProgressForm);
     preloadHolidays();
     restoreSummaryForm();
-    restoreProgressForm();
-    $('progBtn').addEventListener('click', runProgress);
+    $('bugTable').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-people]');
+      if (!btn) return;
+      const trs = $('bugTable').querySelectorAll(`tr[data-people-of="${btn.dataset.people}"]`);
+      const open = trs.length && trs[0].classList.contains('hidden');
+      trs.forEach((tr) => tr.classList.toggle('hidden', !open));
+      btn.querySelector('.arrow').textContent = open ? '▾' : '▸';
+    });
+    $('planTable').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tree-act]');
+      if (!btn) return;
+      const open = btn.dataset.treeAct === 'open';
+      btn.closest('.mod-tree').querySelectorAll('details.mod-node').forEach((d) => { d.open = open; });
+    });
     $('progCopyBtn').addEventListener('click', (e) => copy($('progText').textContent, e.target));
     loadProjects();
     $('copyTextBtn').addEventListener('click', (e) => copy($('reportText').textContent, e.target));
@@ -1293,6 +1694,8 @@
         if (!ids.includes(id)) id = ids[0];
         document.querySelectorAll('.query-section').forEach((s) => s.classList.toggle('hidden', s.id !== id));
         document.querySelectorAll('.query-tab').forEach((b) => b.classList.toggle('active', b.dataset.target === id));
+        document.getElementById('periodRow').classList.toggle('hidden', id === 'close-rate');
+        document.getElementById('periodHint').classList.toggle('hidden', id === 'close-rate');
       }
       document.querySelectorAll('.query-tab').forEach((b) => b.addEventListener('click', () => {
         history.replaceState(null, '', '#' + b.dataset.target);
