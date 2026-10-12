@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTC 数据推送配置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .inp { width: 100%; padding: .45rem .75rem; border: 1px solid #cbd5e1; border-radius: .5rem; background: #fff; font-size: .875rem; }
+    .inp:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+    .lbl { font-size: .75rem; color: #64748b; display: block; margin-bottom: .25rem; }
+    .btn { padding: .4rem .9rem; border-radius: .5rem; font-size: .875rem; }
+    .btn:disabled { opacity: .5; }
+    .preview a { color: #2563eb; }
+    .preview h3 { font-weight: 600; font-size: 1rem; margin-top: .25rem; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="font-semibold text-slate-800">📮 CTC 数据推送配置</h1>
+        <p id="projectInfo" class="text-xs text-slate-400"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="saveState" class="text-xs text-slate-400"></span>
+        <button id="saveBtn" class="btn bg-slate-200 hover:bg-slate-300">保存配置</button>
+        <button id="applyBtn" class="btn bg-blue-600 text-white hover:bg-blue-700">保存并应用定时任务</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-6 space-y-6">
+    <div id="msg" class="hidden rounded-lg p-3 text-sm"></div>
+
+    <!-- CTC 登录 + 项目 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-semibold text-slate-800">🔑 CTC 登录</h2>
+          <p id="loginState" class="text-sm text-slate-500 mt-1">检查中…</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="loginMsg" class="text-xs text-slate-500"></span>
+          <button type="button" id="loginBtn" class="btn bg-blue-600 text-white hover:bg-blue-700">飞书登录</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400">定时推送用这里登录的 CTC 凭证（约一周过期）。过期后群里会收到提醒，回到这里再点一次「飞书登录」即可。</p>
+      <div class="pt-3 border-t border-slate-100">
+        <span class="lbl">项目（两个推送共用；可输入名称 / 项目代号搜索，「我的项目」在前）</span>
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-3 items-center">
+          <input id="projectSearch" list="projectList" class="inp" placeholder="输入项目名称或代号搜索" autocomplete="off" />
+          <datalist id="projectList"></datalist>
+        </div>
+      </div>
+    </section>
+
+    <!-- 人员数据 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800">👥 人员数据</h2>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="p_enabled" /> 启用定时推送</label>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
+        <div><span class="lbl">群机器人 Webhook</span><input id="p_webhook" class="inp font-mono" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." /></div>
+        <div><span class="lbl">签名密钥（开了「签名校验」才填）</span><input id="p_secret" type="password" class="inp font-mono" /></div>
+      </div>
+      <div>
+        <span class="lbl">推送时间（工作日；节假日自动跳过、调休补班照常）</span>
+        <div id="p_schedule" class="space-y-2"></div>
+        <button type="button" id="p_addTime" class="mt-2 text-xs text-blue-600 hover:underline">+ 添加时间</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div><span class="lbl">版本（用例执行、Bug 新增）</span><select id="p_version" class="inp"></select></div>
+        <div><span class="lbl">回归统计版本（回归关闭 / 失败）</span><select id="p_regVersion" class="inp"></select></div>
+      </div>
+      <div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="lbl">统计人员</span>
+          <span class="flex items-center gap-3 text-xs">
+            <button type="button" id="p_savePreset" class="text-blue-600 hover:underline">把当前名单存为快捷选项</button>
+            <button type="button" id="p_clear" class="text-slate-400 hover:text-red-600">清空</button>
+          </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs mt-1 mb-2">
+          <span class="text-slate-400">快捷选项：</span>
+          <span id="p_presets" class="flex flex-wrap gap-2"></span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3 items-start mt-1">
+          <div>
+            <input id="p_search" list="userList" class="inp" placeholder="输入姓名搜索，选中即添加" autocomplete="off" />
+            <datalist id="userList"></datalist>
+          </div>
+          <div id="p_people" class="flex flex-wrap gap-2 min-h-[2.4rem] items-center"></div>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <select id="p_runSlot" class="inp !w-auto">
+          <option value="morning">前一个工作日</option>
+          <option value="evening">今天截至现在</option>
+        </select>
+        <button type="button" data-run="people" data-dry="1" class="btn bg-slate-200 hover:bg-slate-300">预览</button>
+        <button type="button" data-run="people" class="btn bg-blue-600 text-white hover:bg-blue-700">立即推送到群</button>
+        <span id="p_runMsg" class="text-xs text-slate-500"></span>
+      </div>
+      <div id="p_preview" class="hidden preview rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed"></div>
+    </section>
+
+    <!-- 版本进度 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800">🚦 版本进度</h2>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="g_enabled" /> 启用定时推送</label>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3">
+        <div><span class="lbl">群机器人 Webhook</span><input id="g_webhook" class="inp font-mono" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." /></div>
+        <div><span class="lbl">签名密钥（开了「签名校验」才填）</span><input id="g_secret" type="password" class="inp font-mono" /></div>
+      </div>
+      <div>
+        <span class="lbl">推送时间（工作日；节假日自动跳过、调休补班照常）</span>
+        <div id="g_schedule" class="space-y-2"></div>
+        <button type="button" id="g_addTime" class="mt-2 text-xs text-blue-600 hover:underline">+ 添加时间</button>
+      </div>
+      <div>
+        <span class="lbl">推送的版本：自动取 CTC 提测单里未完成的版本（等待提测 / 测试审核 / 测试打回 / 测试中），取消勾选即排除</span>
+        <div id="g_versions" class="flex flex-wrap gap-3 text-sm min-h-[2rem] items-center text-slate-400">加载中…</div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div><span class="lbl">回归统计版本</span><select id="g_regVersion" class="inp">
+          <option value="same">各版本统计自己的回归</option>
+          <option value="-1">已发布版本</option>
+          <option value="all">所有版本</option>
+        </select></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <button type="button" data-run="progress" data-dry="1" class="btn bg-slate-200 hover:bg-slate-300">预览</button>
+        <button type="button" data-run="progress" class="btn bg-blue-600 text-white hover:bg-blue-700">立即推送到群</button>
+        <span id="g_runMsg" class="text-xs text-slate-500"></span>
+      </div>
+      <div id="g_preview" class="hidden preview rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed"></div>
+    </section>
+
+    <!-- 定时任务 + 日志 -->
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800">⏰ 定时任务（Windows 任务计划）</h2>
+        <button type="button" id="refreshBtn" class="text-xs text-blue-600 hover:underline">刷新</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left whitespace-nowrap">
+          <thead class="text-slate-500 border-b border-slate-200"><tr>
+            <th class="py-2 pr-4 font-normal">任务</th><th class="py-2 pr-4 font-normal">状态</th>
+            <th class="py-2 pr-4 font-normal">下次运行</th><th class="py-2 pr-4 font-normal">上次运行</th><th class="py-2 font-normal">上次结果</th>
+          </tr></thead>
+          <tbody id="tasks" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <p class="text-xs text-slate-400"><span id="kitVersion"></span>　更新程序：重新运行一次「一键安装」即可，配置和登录会保留。</p>
+      <p class="text-xs text-slate-400">电脑需要开机并登录；改了推送时间或启用开关后，点右上角「保存并应用定时任务」才会生效。CTC 登录约每周过期一次，过期时会往群里发提醒，执行 <code>ctcmcpctl login</code> 即可恢复。</p>
+      <details class="text-sm">
+        <summary class="cursor-pointer text-slate-600">运行日志（最近 100 条）</summary>
+        <pre id="log" class="mt-2 bg-slate-900 text-slate-100 rounded p-3 text-xs max-h-72 overflow-auto whitespace-pre-wrap"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const VERSION_OPTS = [['all', '所有版本'], ['-1', '已发布版本'], ['-2', '未发布版本']];
+    let config = null;
+    let users = [];
+    let iterating = [];
+    let dirty = false;
+
+    async function api(p, body) {
+      const r = await fetch(p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.status);
+      return j;
+    }
+    function showMsg(text, ok = true) {
+      const m = $('msg');
+      m.textContent = text;
+      m.className = 'rounded-lg p-3 text-sm ' + (ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200');
+      clearTimeout(showMsg.t);
+      showMsg.t = setTimeout(() => m.classList.add('hidden'), 6000);
+    }
+    function markDirty() { dirty = true; $('saveState').textContent = '有未保存的修改'; }
+    const toVer = (v) => (v === 'all' || v === 'same' ? v : Number(v));
+
+    // ---------- 推送时间 ----------
+    function renderSchedule(prefix, list, withSlot) {
+      $(prefix + '_schedule').innerHTML = list.map((s, i) => `
+        <div class="flex items-center gap-2">
+          <input type="time" class="inp !w-36" value="${esc(s.time)}" data-i="${i}" data-k="time" />
+          ${withSlot ? `<select class="inp !w-48" data-i="${i}" data-k="slot">
+            <option value="morning" ${s.slot !== 'evening' ? 'selected' : ''}>统计前一个工作日</option>
+            <option value="evening" ${s.slot === 'evening' ? 'selected' : ''}>统计当天截至推送时</option>
+          </select>` : ''}
+          <button type="button" data-del="${i}" class="text-xs text-slate-400 hover:text-red-600">删除</button>
+        </div>`).join('') || '<span class="text-xs text-slate-400">没有推送时间（不会定时推送）</span>';
+    }
+    function bindSchedule(prefix, key, withSlot) {
+      const box = $(prefix + '_schedule');
+      box.addEventListener('change', (e) => {
+        const i = e.target.dataset.i;
+        if (i === undefined) return;
+        config[key].schedule[i][e.target.dataset.k] = e.target.value;
+        markDirty();
+      });
+      box.addEventListener('click', (e) => {
+        if (e.target.dataset.del === undefined) return;
+        config[key].schedule.splice(Number(e.target.dataset.del), 1);
+        renderSchedule(prefix, config[key].schedule, withSlot);
+        markDirty();
+      });
+      $(prefix + '_addTime').addEventListener('click', () => {
+        config[key].schedule.push(withSlot ? { time: '09:00', slot: 'morning' } : { time: '18:00' });
+        renderSchedule(prefix, config[key].schedule, withSlot);
+        markDirty();
+      });
+    }
+
+    // ---------- 人员 ----------
+    function renderPeople() {
+      const list = config.people.people;
+      if (config.presets) renderPresets();
+      $('p_people').innerHTML = list.length ? list.map((u) => `
+        <span class="inline-flex items-center gap-1 pl-3 pr-1 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-sm text-blue-700">${esc(u.name)}
+          <button type="button" data-rm="${u.id}" class="w-5 h-5 rounded-full text-blue-400 hover:bg-blue-100 hover:text-red-600">×</button></span>`).join('')
+        : '<span class="text-sm text-slate-400">还没有添加人员</span>';
+    }
+    $('p_people').addEventListener('click', (e) => {
+      if (!e.target.dataset.rm) return;
+      config.people.people = config.people.people.filter((u) => String(u.id) !== e.target.dataset.rm);
+      renderPeople();
+      markDirty();
+    });
+    $('p_search').addEventListener('change', (e) => {
+      const u = users.find((x) => `${x.name}（${x.account}）` === e.target.value || x.name === e.target.value);
+      if (!u) return;
+      if (!config.people.people.some((x) => x.id === u.id)) config.people.people.push({ id: u.id, name: u.name });
+      e.target.value = '';
+      renderPeople();
+      markDirty();
+    });
+    // ---------- 人员快捷选项（可自定义，保存在 config.presets） ----------
+    const sameList = (a, b) => a.map((u) => u.id).sort().join(',') === b.map((u) => u.id).sort().join(',');
+    function renderPresets() {
+      const list = config.presets || [];
+      $('p_presets').innerHTML = list.length ? list.map((g, i) => {
+        const on = sameList(g.people, config.people.people);
+        return `<span class="inline-flex items-center rounded-full border ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600'}">
+          <button type="button" data-preset="${i}" class="pl-3 pr-1 py-1 hover:underline" title="${esc(g.people.map((u) => u.name).join('、'))}">${on ? '✓ ' : ''}${esc(g.name)}（${g.people.length}人）</button>
+          <button type="button" data-preset-del="${i}" class="pr-2 pl-1 ${on ? 'text-blue-200' : 'text-slate-300'} hover:text-red-500" title="删除这个快捷选项">×</button></span>`;
+      }).join('') : '<span class="text-slate-400">还没有，选好人员后点「把当前名单存为快捷选项」</span>';
+    }
+    $('p_presets').addEventListener('click', (e) => {
+      const apply = e.target.closest('[data-preset]');
+      const del = e.target.closest('[data-preset-del]');
+      if (apply) {
+        config.people.people = config.presets[Number(apply.dataset.preset)].people.map((u) => ({ ...u }));
+        renderPeople();
+        markDirty();
+      } else if (del) {
+        const g = config.presets[Number(del.dataset.presetDel)];
+        if (!confirm(`删除快捷选项「${g.name}」？`)) return;
+        config.presets.splice(Number(del.dataset.presetDel), 1);
+        renderPresets();
+        markDirty();
+      }
+    });
+    $('p_savePreset').addEventListener('click', () => {
+      if (!config.people.people.length) return showMsg('先添加人员，再保存为快捷选项', false);
+      const name = (prompt('快捷选项名称：', '') || '').trim();
+      if (!name) return;
+      config.presets = (config.presets || []).filter((g) => g.name !== name);   // 同名覆盖
+      config.presets.push({ name, people: config.people.people.map((u) => ({ ...u })) });
+      renderPresets();
+      markDirty();
+      showMsg(`已添加快捷选项「${name}」，记得保存配置`);
+    });
+    $('p_clear').addEventListener('click', () => { config.people.people = []; renderPeople(); markDirty(); });
+
+    // ---------- 版本进度：迭代中版本勾选 ----------
+    function renderIterating() {
+      const ex = config.progress.exclude || [];
+      $('g_versions').innerHTML = iterating.length ? iterating.map((n) => `
+        <label class="inline-flex items-center gap-1.5 text-slate-700"><input type="checkbox" data-ver="${esc(n)}" ${ex.includes(n) ? '' : 'checked'} />${esc(n)}</label>`).join('')
+        : (config.ctc.projectId ? '当前没有迭代中的版本' : '先在上方选择项目');
+    }
+    $('g_versions').addEventListener('change', (e) => {
+      const n = e.target.dataset.ver;
+      if (!n) return;
+      const ex = new Set(config.progress.exclude || []);
+      if (e.target.checked) ex.delete(n); else ex.add(n);
+      config.progress.exclude = [...ex];
+      markDirty();
+    });
+
+    // ---------- CTC 登录 ----------
+    async function refreshLogin() {
+      const st = await api('/api/login/status');
+      const el = $('loginState');
+      if (!st.loggedIn) {
+        el.innerHTML = '<span class="text-amber-600">还没有登录，定时推送会失败，请点「飞书登录」</span>';
+      } else if (st.expired) {
+        el.innerHTML = '<span class="text-red-600">登录已过期，请点「飞书登录」重新登录</span>';
+      } else {
+        const exp = st.exp ? new Date(st.exp * 1000).toLocaleString('zh-CN', { hour12: false }) : '未知';
+        el.innerHTML = `<span class="text-green-700">已登录</span>（来源：${esc(st.source)}，有效期至 ${esc(exp)}）`;
+      }
+      $('loginBtn').textContent = st.loggedIn && !st.expired ? '重新登录' : '飞书登录';
+      return st;
+    }
+    $('loginBtn').addEventListener('click', async () => {
+      const win = window.open('about:blank', 'ctc-login', 'width=520,height=680');   // 点击里先开窗，避免被拦截
+      $('loginBtn').disabled = true;
+      $('loginMsg').textContent = '正在打开飞书登录…';
+      try {
+        const { request_id: rid, verify_url: url } = await api('/api/login/start', {});
+        if (win && !win.closed) win.location.href = url; else window.open(url, '_blank');
+        $('loginMsg').textContent = '请在弹出的窗口中完成飞书登录…';
+        const deadline = Date.now() + 10 * 60 * 1000;
+        for (;;) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const r = await api('/api/login/poll?rid=' + encodeURIComponent(rid));
+          if (r.status === 'pending' && Date.now() < deadline) continue;
+          if (r.status === 'ok') {
+            if (win && !win.closed) win.close();
+            $('loginMsg').textContent = '登录成功 ✓';
+            await refreshLogin();
+            loadRemoteLists();
+          } else {
+            $('loginMsg').textContent = r.status === 'pending' ? '登录超时，请重试' : `登录未完成（${r.status}），请重试`;
+          }
+          break;
+        }
+      } catch (e) {
+        if (win && !win.closed) win.close();
+        $('loginMsg').textContent = '登录失败：' + e.message;
+      }
+      $('loginBtn').disabled = false;
+    });
+
+    // ---------- 项目 ----------
+    let projects = [];
+    const projectLabel = (p) => `${p.name}${p.code ? `（${p.code}）` : ''}${p.mine ? ' · 我的项目' : ''}`;
+    // 输入框里直接显示当前项目；点进去临时清空方便搜索，没选就离开则恢复
+    const currentProjectText = () => {
+      const p = projects.find((x) => x.id === config.ctc.projectId);
+      return p ? `${p.name}${p.code ? `（${p.code}）` : ''}` : (config.ctc.projectName || '');
+    };
+    function renderProject() {
+      $('projectSearch').value = currentProjectText();
+      $('projectInfo').textContent = config.ctc.projectId ? `项目：${config.ctc.projectName}` : '还没有选择项目';
+    }
+    $('projectSearch').addEventListener('focus', (e) => {
+      e.target.placeholder = currentProjectText() + '（输入名称或代号搜索）';
+      e.target.value = '';
+    });
+    $('projectSearch').addEventListener('blur', (e) => {
+      // 等 change 事件先处理完选中的项目
+      setTimeout(() => { if (!e.target.value.trim() || !projects.some((x) => projectLabel(x) === e.target.value)) renderProject(); }, 150);
+    });
+    $('projectSearch').addEventListener('change', async (e) => {
+      const p = projects.find((x) => projectLabel(x) === e.target.value || x.name === e.target.value || x.code === e.target.value);
+      if (!p) return;
+      e.target.blur();
+      if (p.id === config.ctc.projectId) return renderProject();
+      config.ctc = { projectId: p.id, pkey: p.pkey, projectName: p.name };
+      renderProject();
+      try {
+        await save();   // 迭代中版本按已保存的项目查询，所以先保存
+        showMsg(`项目已切换为「${p.name}」并保存；版本进度的迭代中版本已按新项目刷新`);
+      } catch (err) { showMsg(err.message, false); }
+      loadIterating();
+    });
+
+    function loadIterating() {
+      $('g_versions').textContent = '加载中…';
+      api('/api/iterating').then((v) => { iterating = v; renderIterating(); })
+        .catch((e) => { $('g_versions').textContent = '迭代中版本加载失败：' + e.message; });
+    }
+    // 依赖 CTC 登录的列表：人员、项目、迭代中版本
+    function loadRemoteLists() {
+      api('/api/users').then((u) => {
+        users = u;
+        $('p_search').placeholder = '输入姓名搜索，选中即添加';
+        $('userList').innerHTML = u.map((x) => `<option value="${esc(x.name)}（${esc(x.account)}）">`).join('');
+      }).catch((e) => { $('p_search').placeholder = '人员列表加载失败：' + e.message; });
+      api('/api/projects').then((list) => {
+        projects = list;
+        $('projectList').innerHTML = list.map((p) => `<option value="${esc(projectLabel(p))}">`).join('');
+        if (document.activeElement !== $('projectSearch')) renderProject();
+      }).catch((e) => { $('projectSearch').placeholder = '项目列表加载失败：' + e.message; });
+      loadIterating();
+    }
+
+    // ---------- 读写配置 ----------
+    function fill() {
+      const p = config.people;
+      const g = config.progress;
+      renderProject();
+      renderPresets();
+      $('p_enabled').checked = p.enabled !== false;
+      $('p_webhook').value = p.webhook || '';
+      $('p_secret').value = p.secret || '';
+      ['p_version', 'p_regVersion'].forEach((id) => {
+        $(id).innerHTML = VERSION_OPTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+      });
+      $('p_version').value = String(p.version);
+      $('p_regVersion').value = String(p.regVersion);
+      renderSchedule('p', p.schedule, true);
+      renderPeople();
+      $('g_enabled').checked = g.enabled !== false;
+      $('g_webhook').value = g.webhook || '';
+      $('g_secret').value = g.secret || '';
+      $('g_regVersion').value = String(g.regVersion ?? 'same');
+      renderSchedule('g', g.schedule, false);
+    }
+    function collect() {
+      Object.assign(config.people, {
+        enabled: $('p_enabled').checked, webhook: $('p_webhook').value.trim(), secret: $('p_secret').value.trim(),
+        version: toVer($('p_version').value), regVersion: toVer($('p_regVersion').value),
+      });
+      Object.assign(config.progress, {
+        enabled: $('g_enabled').checked, webhook: $('g_webhook').value.trim(), secret: $('g_secret').value.trim(),
+        version: 'iterating', regVersion: toVer($('g_regVersion').value),
+      });
+      return config;
+    }
+    async function save() {
+      await api('/api/config', collect());
+      dirty = false;
+      $('saveState').textContent = '已保存 ' + new Date().toLocaleTimeString();
+    }
+    ['p_enabled', 'p_webhook', 'p_secret', 'p_version', 'p_regVersion', 'g_enabled', 'g_webhook', 'g_secret', 'g_regVersion']
+      .forEach((id) => $(id).addEventListener('change', markDirty));
+
+    $('saveBtn').addEventListener('click', async () => {
+      try { await save(); showMsg('配置已保存。改了推送时间或启用开关的话，记得点「保存并应用定时任务」。'); } catch (e) { showMsg(e.message, false); }
+    });
+    $('applyBtn').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        await save();
+        renderTasks(await api('/api/schedule', {}));
+        showMsg('配置已保存，定时任务已更新');
+      } catch (err) { showMsg(err.message, false); }
+      e.target.disabled = false;
+    });
+
+    // ---------- 预览 / 立即推送 ----------
+    function cardHtml(card) {
+      const mdToHtml = (t) => esc(t)
+        .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        .replace(/&lt;font color=&#39;(\w+)&#39;&gt;|&lt;font color='(\w+)'&gt;/g, (m, a, b) => `<span style="color:${a || b}">`)
+        .replace(/&lt;\/font&gt;/g, '</span>')
+        .replace(/\n/g, '<br>');
+      const els = card.body.elements.map((e) => (e.tag === 'hr' ? '<hr class="my-2 border-slate-200">'
+        : e.tag === 'markdown' ? `<div>${mdToHtml(e.content)}</div>`
+          : e.tag === 'button' ? `<div class="mt-2"><span class="inline-block px-3 py-1 rounded border border-slate-300 bg-white text-xs">${esc(e.text.content)}</span></div>` : ''));
+      return `<div class="font-semibold text-blue-700 mb-2">${esc(card.header.title.content)}</div>${els.join('')}`;
+    }
+    document.querySelectorAll('[data-run]').forEach((btn) => btn.addEventListener('click', async () => {
+      const job = btn.dataset.run;
+      const dry = !!btn.dataset.dry;
+      const prefix = job === 'people' ? 'p' : 'g';
+      if (!dry && !confirm('确定现在推送到群里吗？')) return;
+      document.querySelectorAll(`[data-run="${job}"]`).forEach((b) => { b.disabled = true; });
+      $(prefix + '_runMsg').textContent = dry ? '生成预览中…' : '推送中…';
+      try {
+        await save();
+        const r = await api('/api/run', { job, slot: $('p_runSlot').value, dryRun: dry });
+        $(prefix + '_runMsg').textContent = r.log;
+        $(prefix + '_runMsg').className = 'text-xs ' + (r.ok ? 'text-green-700' : 'text-red-600');
+        if (r.card) {
+          $(prefix + '_preview').innerHTML = cardHtml(r.card);
+          $(prefix + '_preview').classList.remove('hidden');
+        }
+        loadLog();
+      } catch (e) {
+        $(prefix + '_runMsg').textContent = e.message;
+      }
+      document.querySelectorAll(`[data-run="${job}"]`).forEach((b) => { b.disabled = false; });
+    }));
+
+    // ---------- 定时任务 / 日志 ----------
+    const RESULT = { 0: '成功', 1: '失败', 267011: '还没运行过', 267009: '运行中' };
+    function renderTasks(list) {
+      const label = (args) => (args.includes('progress') ? '版本进度' : args.includes('evening') ? '人员数据（当天）' : '人员数据（前一个工作日）');
+      $('tasks').innerHTML = list.length ? list.map((t) => `
+        <tr><td class="py-2 pr-4">${esc(label(t.args || ''))} <span class="text-xs text-slate-400">${esc(t.name)}</span></td>
+          <td class="py-2 pr-4">${t.state === 'Ready' ? '就绪' : esc(t.state)}</td>
+          <td class="py-2 pr-4">${esc(t.next || '—')}</td><td class="py-2 pr-4">${esc(t.last || '—')}</td>
+          <td class="py-2 ${t.result === 0 ? 'text-green-700' : t.result === 267011 ? 'text-slate-400' : 'text-red-600'}">${esc(RESULT[t.result] ?? t.result)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="py-3 text-slate-400">还没有定时任务，点右上角「保存并应用定时任务」创建</td></tr>';
+    }
+    async function loadTasks() { try { renderTasks(await api('/api/schedule')); } catch (e) { showMsg(e.message, false); } }
+    async function loadLog() { try { $('log').textContent = (await api('/api/log')).join('\n'); } catch (e) { /* 忽略 */ } }
+    $('refreshBtn').addEventListener('click', () => { loadTasks(); loadLog(); });
+    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+    (async () => {
+      config = await api('/api/config');
+      config.ctc ||= { projectId: null, pkey: '', projectName: '' };
+      api('/api/version').then((v) => { $('kitVersion').textContent = '程序版本 ' + v.version; }).catch(() => {});
+      config.people.schedule ||= [];
+      config.progress.schedule ||= [];
+      config.progress.exclude ||= [];
+      config.presets ||= [];
+      fill();
+      bindSchedule('p', 'people', true);
+      bindSchedule('g', 'progress', false);
+      config.presets ||= [];
+      loadTasks();
+      loadLog();
+      const st = await refreshLogin();
+      if (st.loggedIn && !st.expired) loadRemoteLists();
+      else ['g_versions'].forEach((id) => { $(id).textContent = '登录后显示'; });
+    })();
+  </script>
+</body>
+</html>

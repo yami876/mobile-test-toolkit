@@ -52,7 +52,26 @@
     <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
       <a href="../index.html" class="text-sm text-slate-500 hover:text-blue-600">← 返回首页</a>
       <h1 class="font-semibold text-slate-700">📈 CTC 数据查询</h1>
-      <span class="w-16"></span>
+      <span class="relative">
+        <button type="button" id="pushConfigBtn" class="text-sm text-slate-500 hover:text-blue-600" title="飞书定时推送的配置页（运行在本机）">📮 推送配置</button>
+        <div id="pushConfigTip" class="hidden absolute right-0 top-8 z-30 w-96 rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-lg space-y-3">
+          <div class="font-semibold text-slate-800 text-sm">📮 飞书定时推送</div>
+          <p>把「人员数据」「版本进度」每天定时推送到飞书群。推送程序运行在你自己的电脑上（到点时电脑需要开机），每人配置自己的推送，互不影响。</p>
+          <div class="rounded bg-amber-50 border border-amber-200 px-3 py-2 text-amber-800">没有检测到本机的推送配置页。</div>
+          <div class="space-y-1">
+            <div class="font-medium text-slate-700">第一次使用：一键安装</div>
+            <p>下载后双击运行，会自动安装推送程序和运行环境（没装 Node 会自动下载免安装版，不需要管理员权限），并在桌面创建「CTC 推送配置」。</p>
+            <a href="../push-kit/install.bat" download="CTC推送一键安装.bat" class="inline-block mt-1 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700">⬇ 下载一键安装</a>
+            <p class="text-slate-400">安装完成后，下载的「CTC推送一键安装.bat」可以删除；桌面的「CTC 推送配置」快捷方式请保留（误删了重新运行一次安装即可恢复）。</p>
+          </div>
+          <div class="space-y-1">
+            <div class="font-medium text-slate-700">已经装过：</div>
+            <p>双击桌面「CTC 推送配置」（或 <code class="bg-slate-100 px-1">%USERPROFILE%\.ctc-daily\打开推送配置.bat</code>），打开后再点这个按钮就能直接进入。</p>
+            <p>更新程序：重新运行一次一键安装，配置和登录都会保留。</p>
+          </div>
+          <button type="button" id="pushConfigClose" class="text-blue-600 hover:underline">知道了</button>
+        </div>
+      </span>
     </div>
   </header>
 
@@ -99,7 +118,7 @@
             <div id="projectPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
           </div>
         </div>
-        <div class="block">
+        <div id="versionBlock" class="block">
           <span class="text-xs text-slate-500">版本</span>
           <div class="relative mt-1">
             <input id="versionInput" type="text" autocomplete="off" placeholder="先选项目，可输入版本号筛选"
@@ -132,7 +151,7 @@
     </section>
 
     <!-- 查询类型 Tab：新增查询时在这里加按钮，下面加同 id 的 section -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
       <button data-target="close-rate" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">📊</span>
         <span class="text-sm font-medium text-slate-700">版本关闭率</span>
@@ -144,6 +163,14 @@
       <button data-target="summary" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">📝</span>
         <span class="text-sm font-medium text-slate-700">测试小结</span>
+      </button>
+      <button data-target="people" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">👥</span>
+        <span class="text-sm font-medium text-slate-700">人员数据</span>
+      </button>
+      <button data-target="weekly" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">🗓️</span>
+        <span class="text-sm font-medium text-slate-700">每周数据</span>
       </button>
     </div>
 
@@ -345,6 +372,139 @@
     </details>
     </section>
 
+    <!-- ============== 人员数据 ============== -->
+    <section id="people" class="query-section hidden space-y-6">
+    <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs text-slate-500">统计人员（输入姓名搜索添加，可多选；名单会保存在本机）</span>
+        <button type="button" id="peopleClearBtn" class="text-xs text-slate-400 hover:text-red-600">清空名单</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-400">快捷选项：</span>
+        <span id="peoplePresets" class="flex flex-wrap gap-2"></span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3 items-start">
+        <div class="relative">
+          <input id="personInput" type="text" autocomplete="off" placeholder="登录后可搜索姓名 / 拼音账号"
+            class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+          <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">▼</span>
+          <div id="personPanel" class="hidden absolute z-20 mt-1 w-full max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg text-sm"></div>
+        </div>
+        <div id="peopleChips" class="flex flex-wrap gap-2 min-h-[2.5rem] items-center"></div>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-slate-400">用例新增 / 更新按整个项目统计；用例执行、Bug 新增按所选版本统计；回归关闭 / 失败按「回归统计版本」统计，算在报告人头上。</p>
+        <span class="flex items-center gap-3 ml-auto">
+          <span id="peopleTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
+          <button id="peopleBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+        </span>
+      </div>
+    </section>
+
+    <section id="peopleResult" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold text-slate-800">👥 人员数据</div>
+        <button id="peopleCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制表格</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left whitespace-nowrap">
+          <thead class="text-slate-500 border-b border-slate-200">
+            <tr>
+              <th class="py-2 pr-3 font-normal">人员</th>
+              <th class="py-2 pr-3 font-normal text-right">用例新增</th>
+              <th class="py-2 pr-3 font-normal text-right">用例更新</th>
+              <th class="py-2 pr-3 font-normal text-right">用例执行</th>
+              <th class="py-2 pr-3 font-normal text-right">Bug 新增</th>
+              <th class="py-2 pr-3 font-normal text-right">回归关闭</th>
+              <th class="py-2 font-normal text-right">回归失败</th>
+            </tr>
+          </thead>
+          <tbody id="peopleTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <p class="text-xs text-slate-400">Bug 相关数字可点开到 CTC 核对；用例新增 / 更新的数字点开在本页列出用例（CTC 用例库不支持带筛选条件的链接）；「复制表格」可直接粘贴到飞书表格 / Excel。</p>
+    </section>
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-28 text-slate-500">用例新增</td><td>所选项目的用例库中，创建时间在测试周期内、创建人是该人员的用例数（不分版本）</td></tr>
+          <tr><td class="py-1.5 text-slate-500">用例更新</td><td>所选项目的用例库中，最后一次更新在测试周期内、且最后更新人是该人员的用例数（CTC 只记录最后一次更新人；之后被别人改过就算别人的）</td></tr>
+          <tr><td class="py-1.5 text-slate-500">用例执行</td><td>所选版本的全部测试计划中，执行人是该人员、已执行（非未执行）、且执行结果更新时间在测试周期内的用例数</td></tr>
+          <tr><td class="py-1.5 text-slate-500">Bug 新增</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起（不含拒绝）；报告人是该人员</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归关闭</td><td>影响版本：回归统计版本；更新时间在测试周期内；状态：关闭；报告人是该人员</td></tr>
+          <tr><td class="py-1.5 text-slate-500">回归失败</td><td>影响版本：回归统计版本；更新时间在测试周期内；回归失败；状态：新创建、处理中、已解决、关闭、挂起；报告人是该人员</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
+    <!-- ============== 每周数据 ============== -->
+    <section id="weekly" class="query-section hidden space-y-6">
+    <section class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="weeklyModes" class="inline-flex rounded-lg border border-slate-300 overflow-hidden text-sm">
+            <button type="button" data-mode="week" class="px-3 h-9">按周</button>
+            <button type="button" data-mode="custom" class="px-3 h-9 border-l border-slate-300">自定义</button>
+          </span>
+          <span id="weekControls" class="flex flex-wrap items-center gap-2">
+          <button type="button" id="weekPrevBtn" class="w-9 h-9 rounded-lg border border-slate-300 bg-white hover:border-blue-400 hover:text-blue-600" title="上一周">‹</button>
+          <select id="weekSelect" class="h-9 px-2 rounded-lg border border-slate-300 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></select>
+          <button type="button" id="weekNextBtn" class="w-9 h-9 rounded-lg border border-slate-300 bg-white hover:border-blue-400 hover:text-blue-600" title="下一周">›</button>
+          <button type="button" id="weekNowBtn" class="h-9 px-3 rounded-lg border border-slate-300 bg-white text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600">本周</button>
+          <span id="weekRangeText" class="text-sm text-slate-500"></span>
+          </span>
+          <span id="customControls" class="hidden flex flex-wrap items-center gap-2">
+            <span class="relative">
+              <input id="weeklyRange" type="text" readonly placeholder="点开始日期、再点结束日期"
+                class="h-9 w-60 px-3 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+              <input id="weeklyStart" type="hidden" />
+              <input id="weeklyEnd" type="hidden" />
+            </span>
+            <span id="weeklyPresets" class="flex flex-wrap gap-1 text-xs">
+              <button type="button" data-preset="month" class="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600">本月</button>
+              <button type="button" data-preset="lastMonth" class="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600">上月</button>
+              <button type="button" data-preset="30" class="px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600">近 30 天</button>
+            </span>
+          </span>
+        </div>
+        <span class="flex items-center gap-3 ml-auto">
+          <span id="weeklyTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
+          <button id="weeklyBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+        </span>
+      </div>
+      <p class="text-xs text-slate-400 mt-3">按自然周（周一～周日）或自定义日期范围（含首尾两天）统计所选项目、不限版本的问题；切换周期或项目后自动查询。</p>
+    </section>
+
+    <section id="weeklyResult" class="hidden space-y-4">
+      <div id="weeklyCards" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+      <div id="weeklyLists" class="space-y-4"></div>
+      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="text-xs text-slate-500">每周数据文字版（可直接粘贴）</div>
+          <button id="weeklyCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制</button>
+        </div>
+        <pre id="weeklyText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </section>
+    </section>
+
+    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+      <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
+      <table class="mt-3 w-full text-left">
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="py-1.5 w-32 text-slate-500">统计周期</td><td>按周：ISO 周（CW），周一到周日；自定义：所选日期范围；均含首尾两天。下文「该周」即所选周期</td></tr>
+          <tr><td class="py-1.5 text-slate-500">用户反馈 Bug</td><td>创建时间在该周内；发现阶段：用户反馈；状态：新创建、处理中、已解决、关闭、挂起（不含拒绝）</td></tr>
+          <tr><td class="py-1.5 text-slate-500">漏测 Bug</td><td>创建时间在该周内；测试是否漏测：是；状态同上</td></tr>
+          <tr><td class="py-1.5 text-slate-500">小迭代漏测 Bug</td><td>创建时间在该周内；测试小迭代漏测：是；状态同上</td></tr>
+          <tr><td class="py-1.5 text-slate-500">拒绝 Bug</td><td>创建时间在该周内；状态：拒绝</td></tr>
+          <tr><td class="py-1.5 text-slate-500">说明</td><td>同一个问题可能同时属于多类（如既是用户反馈又是漏测），会在各类里都列出；项目里没有对应字段时该类显示「项目无此字段」</td></tr>
+        </tbody>
+      </table>
+    </details>
+    </section>
+
   </main>
 
   <!-- ============== CTC 登录 + 各查询 ============== -->
@@ -401,12 +561,23 @@
     }
 
     const versionCache = {};
+    const templateCache = {};
+
+    // 项目建单模板：字段定义 + 可选值（影响版本、自定义字段的选项都在这）
+    function projectTemplate(projectId) {
+      if (!templateCache[projectId]) {
+        templateCache[projectId] = request(`/v1/project/${projectId}/template?issueType=1`)
+          .then((tpl) => tpl || [])
+          .catch((e) => { delete templateCache[projectId]; throw e; });
+      }
+      return templateCache[projectId];
+    }
 
     // 影响版本的可选值挂在 template 里 fieldKey=versions 字段的 CustomFieldOptions 下
     async function versionOptions(projectId) {
       if (!versionCache[projectId]) {
-        const tpl = await request(`/v1/project/${projectId}/template?issueType=1`);
-        const field = (tpl || []).find((f) => (f || {}).fieldKey === 'versions');
+        const tpl = await projectTemplate(projectId);
+        const field = tpl.find((f) => (f || {}).fieldKey === 'versions');
         const seen = new Set();
         versionCache[projectId] = ((field && field.CustomFieldOptions) || []).filter((v) => {
           if (seen.has(v.id)) return false;
@@ -415,6 +586,25 @@
         });
       }
       return versionCache[projectId];
+    }
+
+    // 版本下拉里的「版本组」：已发布 = -1、未发布 = -2（CTC 列表页同样的筛选值），所有版本 = 不加版本条件
+    const UNRELEASED = -2;
+    const VERSION_GROUPS = [
+      { value: RELEASED, label: '已发布版本', sub: '版本组' },
+      { value: UNRELEASED, label: '未发布版本', sub: '版本组' },
+      { value: 'all', label: '所有版本', sub: '不限版本' },
+    ];
+    const isVersionGroup = (vid) => VERSION_GROUPS.some((g) => g.value === vid);
+    const verFilter = (vid) => (vid === 'all' ? undefined : [vid]);
+    // 「V1.5.0」→「V1.5.0版本」，版本组本身已带「版本」两字
+    const verText = (vid, vname) => (isVersionGroup(vid) ? vname : `${vname}版本`);
+    // 测试计划是否属于所选版本 / 版本组
+    async function planVersionMatcher(projectId, vid) {
+      if (vid === 'all') return () => true;
+      if (!isVersionGroup(vid)) return (pv) => pv === vid;
+      const released = new Set((await versionOptions(projectId)).filter((v) => v.released).map((v) => v.id));
+      return vid === RELEASED ? (pv) => released.has(pv) : (pv) => !released.has(pv);
     }
 
     async function resolveVersion(projectId, ref) {
@@ -516,11 +706,11 @@
       try {
         const projectId = projectCombo.value;
         if (!projectId) throw new Error('请先选择项目');
-        const { id: vid, vname } = await resolveVersion(projectId, ver);
-        const [cur, rel] = await Promise.all([collect(projectId, [vid]), collect(projectId, [RELEASED])]);
+        const { id: vid, vname } = isVersionGroup(ver) ? { id: ver, vname: versionCombo.item.label } : await resolveVersion(projectId, ver);
+        const [cur, rel] = await Promise.all([collect(projectId, verFilter(vid)), collect(projectId, [RELEASED])]);
 
         const ok = [cur, rel].every((s) => s.pass_rate && s.pass_a && s.pass_s);
-        const lines = [ok ? '测试通过' : '测试不通过', ...block(`${vname}版本`, cur), ...block('已发布版本', rel)];
+        const lines = [ok ? '测试通过' : '测试不通过', ...block(verText(vid, vname), cur), ...block('已发布版本', rel)];
         lastJson = { version: vname, version_id: vid, current: cur, released: rel };
 
         $('verdict').textContent = (ok ? '✅ ' : '❌ ') + (ok ? '测试通过' : '测试不通过');
@@ -631,6 +821,7 @@
           if (it) pick(it, fire);
           return !!it;
         },
+        clear() { selected = null; close(); },
         get value() { return selected ? selected.value : ''; },
         get item() { return selected; },
       };
@@ -639,6 +830,7 @@
     const projectCombo = createCombo('project', (it) => {
       store.set(PROJECT_KEY, it.value);
       fillVersionList();
+      if (!$('weekly').classList.contains('hidden')) runWeekly();
     });
     const versionCombo = createCombo('version', () => {
       if (!$('close-rate').classList.contains('hidden')) runQuery();
@@ -682,11 +874,11 @@
       versionCombo.setItems([], '版本加载中…');
       try {
         const list = await versionOptions(projectCombo.value);
-        versionCombo.setItems(list.map((v) => ({
+        versionCombo.setItems([...VERSION_GROUPS, ...list.map((v) => ({
           value: v.id,
           label: v.vname || String(v.id),
           sub: v.released ? '' : '未发布',
-        })), '可输入版本号筛选');
+        }))], '可输入版本号筛选');
         fillRegVersionList(list);
       } catch (e) {
         versionCombo.setItems([], '版本加载失败');
@@ -771,6 +963,12 @@
       (f.reporters || []).forEach((u) => q.append('reporter', u));
       (f.assignees || []).forEach((u) => q.append('assignee', u));
       return `${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/issue/list?${q}`;
+    }
+
+    // 问题详情页：不带 project 参数时 CTC 打不开对应问题
+    function ctcIssueUrl(i, pkey, projectId) {
+      const key = `${i.pkey || pkey}-${i.issueNum}`;
+      return `${CTC_WEB}/#/issue/detail/${encodeURIComponent(key)}?project=${i.project || projectId}`;
     }
 
     // 法定节假日 + 调休补班：holiday-cn 按国务院每年放假通知整理，isOffDay=true 放假 / false 补班
@@ -1053,9 +1251,9 @@
       const created = [start, end];
       const reg = regVersionCombo.item || { value: RELEASED, label: '已发布版本' };
       const rows = [
-        { no: 4, name: '当前轮次新增问题', f: { versions: [vid], statuses: VALID, created }, severe: true },
-        { no: 5, name: '当前轮次遗留问题', f: { versions: [vid], statuses: OPEN, created }, severe: true },
-        { no: 6, name: `${vname}版本共遗留问题`, f: { versions: [vid], statuses: OPEN }, severe: true },
+        { no: 4, name: '当前轮次新增问题', f: { versions: verFilter(vid), statuses: VALID, created }, severe: true },
+        { no: 5, name: '当前轮次遗留问题', f: { versions: verFilter(vid), statuses: OPEN, created }, severe: true },
+        { no: 6, name: `${verText(vid, vname)}共遗留问题`, f: { versions: verFilter(vid), statuses: OPEN }, severe: true },
         { no: 7, name: '主线版本共遗留问题', f: { versions: [RELEASED], statuses: OPEN }, severe: true },
         { no: 8, name: '回归Bug关闭数', f: { versions: regVersions(reg), statuses: CLOSED, updated: created }, severe: true },
         { no: 9, name: '回归Bug失败数', f: { versions: regVersions(reg), statuses: VALID, updated: created, regressFail: 1 }, severe: true },
@@ -1130,7 +1328,7 @@
 
     const regVersionCombo = createCombo('regVersion', () => saveSummaryForm());
 
-    const ALL_VERSIONS = 'all';   // 回归统计版本选「所有版本」时不加版本条件
+    const ALL_VERSIONS = 'all';   // 回归统计版本选「所有版本」时不加版本条件（与版本下拉的「所有版本」同值）
     const regVersions = (reg) => (reg.value === ALL_VERSIONS ? undefined : [reg.value]);
 
     function fillRegVersionList(list) {
@@ -1165,12 +1363,13 @@
     }
 
     async function loadPlans(projectId, versionId, start, end, details = true) {
+      const inVersion = await planVersionMatcher(projectId, versionId);
       const from = new Date(start + 'T00:00:00').getTime() / 1000;
       const to = new Date(end + 'T23:59:59').getTime() / 1000;
       const data = await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD });
       const plans = (data.list || []).filter((p) => {
         const span = planSpan(p);
-        return p.projectVersionId === versionId && span && span.s <= to && span.e >= from;
+        return inVersion(p.projectVersionId) && span && span.s <= to && span.e >= from;
       });
       if (!details) return plans;
       await Promise.all(plans.map(async (p) => {
@@ -1367,8 +1566,8 @@
         { key: key + 'Critical', name: '其中严重且高优问题', cond: '严重、致命 且 优先级 最高、高', f: { ...f, severities: SEVERE, priorities: HIGH_PRIORITY }, sub: true, critical: true },
       ];
       const rows = [
-        ...issueBlock('created', `${vname}新增问题`, `${vname} · 创建 ${md(start)}～${md(end)} · 有效`, { versions: [vid], statuses: VALID, created: period }),
-        ...issueBlock('pending', `${vname}待处理问题`, `${vname} · 新创建、处理中`, { versions: [vid], statuses: PENDING }),
+        ...issueBlock('created', `${vname}新增问题`, `${vname} · 创建 ${md(start)}～${md(end)} · 有效`, { versions: verFilter(vid), statuses: VALID, created: period }),
+        ...issueBlock('pending', `${vname}待处理问题`, `${vname} · 新创建、处理中`, { versions: verFilter(vid), statuses: PENDING }),
         { key: 'closed', name: '回归关闭数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
         { key: 'reopened', name: '回归打开数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
         { key: 'remain', name: '剩余回归数', cond: `${reg.label} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: regVersions(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] }, groupBy: ['reporter'] },
@@ -1395,7 +1594,7 @@
           <tr><td colspan="3" class="pb-3 pt-0">
             <div class="ml-4 rounded-lg border border-red-100 bg-red-50/50 divide-y divide-red-100 text-xs">${r.issues.map((i) => `
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-                <a href="${CTC_WEB}/#/issue/detail/${encodeURIComponent(issueKey(i))}" target="_blank" class="font-mono text-blue-600 hover:underline">${esc(issueKey(i))}</a>
+                <a href="${ctcIssueUrl(i, pkey, projectId)}" target="_blank" class="font-mono text-blue-600 hover:underline">${esc(issueKey(i))}</a>
                 <span class="flex-1 min-w-[12rem] text-slate-700">${esc(i.summary)}</span>
                 <span class="text-slate-500">${esc(i.issueStatusName || '')}</span>
                 <span class="text-red-600">${esc(i.severityName || '')}</span>
@@ -1537,6 +1736,504 @@
       }
     }
 
+    // ---------- 人员数据 ----------
+    const PEOPLE_KEY = 'ctc-query.people';
+    // 统计人员快捷选项：点一下替换为该名单（ID 为 CTC 用户 ID）
+    const PEOPLE_PRESETS = [
+      {
+        name: 'XS移动端通用人员',
+        people: [{ id: 111, name: '吴雅媚' }, { id: 2757, name: '谭杰尹' }, { id: 2860, name: '谭钧龙' }, { id: 2817, name: '陈芋霖' }],
+      },
+    ];
+
+    function renderPeoplePresets() {
+      const current = loadPeopleList().map((u) => u.id).sort().join(',');
+      $('peoplePresets').innerHTML = PEOPLE_PRESETS.map((g, i) => {
+        const on = g.people.map((u) => u.id).sort().join(',') === current;
+        return `<button type="button" data-preset="${i}" title="${esc(g.people.map((u) => u.name).join('、'))}"
+          class="px-3 py-1 rounded-full border transition ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600'}">${on ? '✓ ' : ''}${esc(g.name)}（${g.people.length}人）</button>`;
+      }).join('');
+    }
+    let usersCache = null;
+
+    function loadPeopleList() {
+      try { return JSON.parse(store.get(PEOPLE_KEY) || '[]'); } catch (e) { return []; }
+    }
+
+    function savePeopleList(list) {
+      store.set(PEOPLE_KEY, JSON.stringify(list));
+      renderPeopleChips();
+      renderPeoplePresets();
+    }
+
+    function renderPeopleChips() {
+      const list = loadPeopleList();
+      $('peopleChips').innerHTML = list.length ? list.map((u) => `
+        <span class="inline-flex items-center gap-1 pl-3 pr-1 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-sm text-blue-700">
+          ${esc(u.name)}
+          <button type="button" data-remove-person="${u.id}" class="w-5 h-5 rounded-full text-blue-400 hover:bg-blue-100 hover:text-red-600" title="移除">×</button>
+        </span>`).join('')
+        : '<span class="text-sm text-slate-400">还没有添加人员</span>';
+    }
+
+    const personCombo = createCombo('person', (it) => {
+      const list = loadPeopleList();
+      if (!list.some((u) => u.id === it.value)) list.push({ id: it.value, name: it.label });
+      savePeopleList(list);
+      personCombo.clear();
+    });
+
+    // CTC 用户列表（ID 与缺陷平台的报告人 / 经办人、用例的创建人 / 更新人一致）
+    async function loadUsers() {
+      if (!store.get(TOKEN_KEY)) return personCombo.setItems([], '登录后可搜索姓名');
+      try {
+        if (!usersCache) usersCache = await request('/api/v1/users', { base: MFD });
+        personCombo.setItems(usersCache.map((u) => ({ value: u.id, label: u.realName || u.userName, sub: u.userName || '' })),
+          '输入姓名 / 拼音账号搜索添加');
+      } catch (e) {
+        personCombo.setItems([], '人员列表加载失败');
+      }
+    }
+
+    // 用例库：按人数（接口只接受单个人员 ID，传数组会被忽略）
+    async function caseCount(projectId, field, timeField, userId, from, to) {
+      const data = await request('/api/v1/test/cases', {
+        base: MFD, method: 'POST',
+        body: { sysProjectId: projectId, page: 1, size: 1, [timeField]: [from, to], [field]: userId },
+      });
+      return data.total || 0;
+    }
+
+    // 所选版本全部测试计划里，周期内由这些人执行的用例数
+    async function executedCounts(projectId, versionId, ids, from, to) {
+      let plans;
+      if (isVersionGroup(versionId)) {
+        const inVersion = await planVersionMatcher(projectId, versionId);
+        plans = ((await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD })).list || [])
+          .filter((p) => inVersion(p.projectVersionId));
+      } else {
+        plans = await request(`/api/v1/test/plan/version/${projectId}/${versionId}`, { base: MFD });
+      }
+      // 只看周期内可能有执行的计划：已开始，且未结束或在周期开始之后才结束（避免把上百个老计划的用例都拉一遍）
+      const active = (plans || []).filter((p) => {
+        const s = p.actualStartTime || p.plannedStartTime;
+        return s && s <= to && (p.status !== 'Done' || (p.actualEndTime || 0) >= from);
+      });
+      const counts = new Map();
+      await Promise.all(active.map(async (p) => {
+        (await loadPlanCases(p.id)).forEach((c) => {
+          if (c.status === 'Prepare' || !ids.includes(c.executor)) return;
+          if (c.updatedAt < from || c.updatedAt > to) return;
+          counts.set(c.executor, (counts.get(c.executor) || 0) + 1);
+        });
+      }));
+      return counts;
+    }
+
+    let lastPeopleRows = null;
+
+    async function runPeople() {
+      showError('');
+      const projectId = projectCombo.value;
+      const version = versionCombo.item;
+      const start = $('sumStart').value;
+      const end = $('sumEnd').value;
+      const people = loadPeopleList();
+      if (!projectId) return showError('请先选择项目');
+      if (!version) return showError('请先选择版本');
+      if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
+      if (start > end) return showError('开始日期不能晚于结束日期');
+      if (!people.length) return showError('请先添加要统计的人员');
+
+      const vid = version.value;
+      const pkey = projectCombo.item.pkey;
+      const reg = regVersionCombo.item || { value: RELEASED, label: '已发布版本' };
+      const from = new Date(start + 'T00:00:00').getTime() / 1000;
+      const to = new Date(end + 'T23:59:59').getTime() / 1000;
+      const ids = people.map((u) => u.id);
+      const period = [start, end];
+      const bugCols = {
+        bugNew: { versions: verFilter(vid), statuses: VALID, created: period },
+        regClosed: { versions: regVersions(reg), statuses: CLOSED, updated: period },
+        regFail: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 },
+      };
+
+      const btn = $('peopleBtn');
+      btn.disabled = true;
+      btn.textContent = '查询中…';
+      try {
+        const [caseNums, executed, bugGroups] = await Promise.all([
+          Promise.all(people.map((u) => Promise.all([
+            caseCount(projectId, 'createBy', 'createdAt', u.id, from, to),
+            caseCount(projectId, 'updateBy', 'updatedAt', u.id, from, to),
+          ]))),
+          executedCounts(projectId, vid, ids, from, to),
+          // Bug 三项：一次查出这些人报告的问题，再按报告人计数
+          Promise.all(Object.entries(bugCols).map(async ([key, f]) => {
+            const issues = await listIssues(projectId, { ...f, reporters: ids });
+            return [key, new Map(groupPeople(issues, 'reporter').map((g) => [g.id, g.count]))];
+          })).then(Object.fromEntries),
+        ]);
+
+        const rows = people.map((u, i) => ({
+          id: u.id,
+          name: u.name,
+          caseNew: caseNums[i][0],
+          caseUpdate: caseNums[i][1],
+          caseExec: executed.get(u.id) || 0,
+          bugNew: bugGroups.bugNew.get(u.id) || 0,
+          regClosed: bugGroups.regClosed.get(u.id) || 0,
+          regFail: bugGroups.regFail.get(u.id) || 0,
+        }));
+        const COLS = ['caseNew', 'caseUpdate', 'caseExec', 'bugNew', 'regClosed', 'regFail'];
+        const total = Object.fromEntries(COLS.map((k) => [k, rows.reduce((s, r) => s + r[k], 0)]));
+        lastPeopleRows = { rows, total, COLS, vname: version.label, start, end, reg, projectId, pkey, from, to };
+
+        const cell = (r, k) => {
+          const n = r[k];
+          const cls = n ? 'text-slate-800' : 'text-slate-300';
+          if (CASE_COLS[k] && r.id && n) {
+            return `<td class="py-2 pr-3 text-right font-mono"><button type="button" data-case-detail="${r.id}" data-case-kind="${k}"
+              class="text-blue-600 hover:underline">${n}</button></td>`;
+          }
+          if (!bugCols[k]) return `<td class="py-2 pr-3 text-right font-mono ${cls}">${n}</td>`;
+          const f = r.id ? { ...bugCols[k], reporters: [r.id] } : { ...bugCols[k], reporters: ids };
+          return `<td class="py-2 pr-3 text-right font-mono"><a href="${esc(ctcListUrl(pkey, f))}" target="_blank" class="${n ? 'text-blue-600' : 'text-slate-300'} hover:underline">${n}</a></td>`;
+        };
+        $('peopleTable').innerHTML = rows.map((r) => `
+          <tr><td class="py-2 pr-3 text-slate-700">${esc(r.name)}</td>${COLS.map((k) => cell(r, k)).join('')}</tr>
+          <tr class="hidden" data-case-row="${r.id}"><td colspan="7" class="pb-3 pt-0 whitespace-normal"></td></tr>`).join('')
+          + `<tr class="border-t-2 border-slate-200 font-medium"><td class="py-2 pr-3 text-slate-700">合计</td>${COLS.map((k) => cell({ ...total, id: 0 }, k)).join('')}</tr>`;
+        $('peopleResult').classList.remove('hidden');
+        stampTime('peopleTime');
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '查询';
+      }
+    }
+
+    // ---- 用例新增 / 更新明细
+    const CASE_COLS = {
+      caseNew: { label: '新增', field: 'createBy', timeField: 'createdAt' },
+      caseUpdate: { label: '更新', field: 'updateBy', timeField: 'updatedAt' },
+    };
+    const CASE_DETAIL_MAX = 500;
+
+    async function toggleCaseDetail(btn) {
+      const userId = Number(btn.dataset.caseDetail);
+      const kind = btn.dataset.caseKind;
+      const tr = $('peopleTable').querySelector(`tr[data-case-row="${userId}"]`);
+      const td = tr.firstElementChild;
+      // 再点同一个数字收起
+      if (!tr.classList.contains('hidden') && tr.dataset.kind === kind) {
+        tr.classList.add('hidden');
+        return;
+      }
+      tr.dataset.kind = kind;
+      tr.classList.remove('hidden');
+      const { projectId, pkey, from, to, rows } = lastPeopleRows;
+      const person = rows.find((r) => r.id === userId);
+      const col = CASE_COLS[kind];
+      td.innerHTML = '<div class="ml-4 text-xs text-slate-400">加载中…</div>';
+      try {
+        const data = await request('/api/v1/test/cases', {
+          base: MFD, method: 'POST',
+          body: { sysProjectId: projectId, page: 1, size: CASE_DETAIL_MAX, [col.timeField]: [from, to], [col.field]: userId },
+        });
+        const list = data.list || [];
+        const tsText = (t) => {
+          const d = new Date(t * 1000);
+          return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+        td.innerHTML = `
+          <div class="ml-4 rounded-lg border border-slate-200 bg-slate-50 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-slate-200">
+              <span class="text-slate-600">${esc(person.name)} ${col.label}的用例：${data.total} 条${data.total > list.length ? `（显示前 ${list.length} 条）` : ''}</span>
+              <a href="${CTC_WEB}/#/project/${encodeURIComponent(pkey)}/dev/testcase" target="_blank" class="text-blue-600 hover:underline">打开 CTC 用例库 ↗</a>
+            </div>
+            <div class="max-h-72 overflow-y-auto divide-y divide-slate-200">${list.map((c) => `
+              <div class="grid grid-cols-[1fr_minmax(8rem,22rem)_5.5rem] gap-3 px-3 py-1.5">
+                <span class="text-slate-700 break-all">${esc(c.name)}</span>
+                <span class="text-slate-400 truncate" title="${esc(c.nodePath || '')}">${esc(c.nodePath || '')}</span>
+                <span class="text-slate-400 text-right font-mono">${tsText(c[col.timeField])}</span>
+              </div>`).join('')}
+            </div>
+          </div>`;
+      } catch (e) {
+        td.innerHTML = `<div class="ml-4 text-xs text-red-600">${esc(e.message)}</div>`;
+      }
+    }
+
+    // 复制成制表符分隔，粘到飞书表格 / Excel 自动分列
+    function peopleTsv() {
+      if (!lastPeopleRows) return '';
+      const { rows, total, COLS } = lastPeopleRows;
+      const head = ['人员', '用例新增', '用例更新', '用例执行', 'Bug新增', '回归关闭', '回归失败'];
+      return [head, ...rows.map((r) => [r.name, ...COLS.map((k) => r[k])]), ['合计', ...COLS.map((k) => total[k])]]
+        .map((line) => line.join('\t')).join('\n');
+    }
+
+    // ---------- 每周数据 ----------
+    const REJECTED = [10002];
+    const WEEKS_BACK = 104;   // 周下拉里能选到的最早一周（往前两年）
+    // 自定义字段按字段名找（各项目的 customfield ID 不一定相同），值按选项名匹配
+    const WEEKLY_CATS = [
+      { key: 'feedback', name: '用户反馈 Bug', fields: ['发现阶段'], value: '用户反馈' },
+      { key: 'missed', name: '漏测 Bug', fields: ['测试是否漏测', '是否漏测'], value: '是' },
+      { key: 'iterMissed', name: '小迭代漏测 Bug', fields: ['测试小迭代漏测', '小迭代漏测'], value: '是' },
+      { key: 'rejected', name: '拒绝 Bug' },
+    ];
+
+    // ISO 周：周一开始，包含当年第一个周四的那周为 CW1
+    function isoWeek(d) {
+      const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+      const year = t.getUTCFullYear();
+      return { year, week: Math.ceil(((t - Date.UTC(year, 0, 1)) / 86400000 + 1) / 7) };
+    }
+    const mondayOf = (d) => {
+      const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      m.setDate(m.getDate() - ((m.getDay() || 7) - 1));
+      return m;
+    };
+    const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    function weekInfo(monday) {
+      const { year, week } = isoWeek(monday);
+      const start = ymd(monday);
+      const end = ymd(addDays(monday, 6));
+      return { year, week, start, end, label: `CW${week}`, range: periodText(start, end) };
+    }
+
+    function fillWeekSelect() {
+      const thisMonday = mondayOf(new Date());
+      $('weekSelect').innerHTML = Array.from({ length: WEEKS_BACK }, (_, i) => {
+        const w = weekInfo(addDays(thisMonday, -7 * i));
+        return `<option value="${w.start}">${w.year} ${w.label}（${md(w.start)}～${md(w.end)}）${i === 0 ? ' 本周' : ''}</option>`;
+      }).join('');
+    }
+
+    function selectedWeek() {
+      return weekInfo(new Date($('weekSelect').value + 'T00:00:00'));
+    }
+
+    function shiftWeek(step) {
+      const sel = $('weekSelect');
+      const i = sel.selectedIndex - step;   // 下拉里新的周在前
+      if (i < 0 || i >= sel.options.length) return;
+      sel.selectedIndex = i;
+      onWeekChange();
+    }
+
+    function onWeekChange() {
+      const sel = $('weekSelect');
+      $('weekPrevBtn').disabled = sel.selectedIndex >= sel.options.length - 1;
+      $('weekNextBtn').disabled = sel.selectedIndex <= 0;
+      const w = selectedWeek();
+      $('weekRangeText').textContent = w.range;
+      if (projectCombo.value) runWeekly();
+    }
+
+    // ---- 周期：按周 / 自定义
+    const WEEKLY_MODE_KEY = 'ctc-query.weeklyMode';
+    let weeklyMode = store.get(WEEKLY_MODE_KEY) === 'custom' ? 'custom' : 'week';
+    let weeklyPicker = null;
+
+    function setWeeklyMode(mode, run = true) {
+      weeklyMode = mode;
+      store.set(WEEKLY_MODE_KEY, mode);
+      $('weeklyModes').querySelectorAll('button').forEach((b) => {
+        const on = b.dataset.mode === mode;
+        b.classList.toggle('bg-blue-600', on);
+        b.classList.toggle('text-white', on);
+        b.classList.toggle('bg-white', !on);
+        b.classList.toggle('text-slate-600', !on);
+      });
+      $('weekControls').classList.toggle('hidden', mode !== 'week');
+      $('customControls').classList.toggle('hidden', mode !== 'custom');
+      if (run && projectCombo.value && currentPeriod()) runWeekly();
+    }
+
+    // 当前统计周期；自定义模式下还没选完日期返回 null
+    function currentPeriod() {
+      if (weeklyMode === 'week') {
+        const w = selectedWeek();
+        return { start: w.start, end: w.end, range: w.range, title: `${w.label}（${w.range}）`, short: w.label };
+      }
+      const start = $('weeklyStart').value;
+      const end = $('weeklyEnd').value;
+      if (!start || !end) return null;
+      const range = periodText(start, end);
+      return { start, end, range, title: range, short: '该时间段内' };
+    }
+
+    function setCustomRange(start, end, run = true) {
+      weeklyPicker.set(start, end);
+      store.set('ctc-query.weeklyRange', JSON.stringify([start, end]));
+      if (run && projectCombo.value) runWeekly();
+    }
+
+    function applyRangePreset(name) {
+      const today = new Date();
+      let s;
+      let e = today;
+      if (name === 'month') s = new Date(today.getFullYear(), today.getMonth(), 1);
+      else if (name === 'lastMonth') {
+        s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        e = new Date(today.getFullYear(), today.getMonth(), 0);
+      } else s = addDays(today, -(Number(name) - 1));
+      setCustomRange(ymd(s), ymd(e));
+    }
+
+    function initWeeklyPeriod() {
+      weeklyPicker = createRangePicker('weekly', (s, e) => setCustomRange(s, e));
+      let saved = null;
+      try { saved = JSON.parse(store.get('ctc-query.weeklyRange') || 'null'); } catch (e) {}
+      if (saved && saved[0] && saved[1]) setCustomRange(saved[0], saved[1], false);
+      else {   // 默认填本周，切到自定义时不至于是空的
+        const w = selectedWeek();
+        setCustomRange(w.start, w.end, false);
+      }
+      setWeeklyMode(weeklyMode, false);
+    }
+
+    // 并发拉取，避免一次打出几百个请求
+    async function pool(items, limit, fn) {
+      const out = new Array(items.length);
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (next < items.length) {
+          const i = next++;
+          out[i] = await fn(items[i]);
+        }
+      }));
+      return out;
+    }
+
+    // 列表接口的问题如果不带自定义字段（expand），逐个取详情补上
+    async function withExpand(issues, pkey) {
+      const lacking = issues.filter((i) => !Array.isArray(i.expand));
+      await pool(lacking, 8, async (i) => {
+        const d = await request(`/v1/issues/key/${encodeURIComponent(`${i.pkey || pkey}-${i.issueNum}`)}`).catch(() => null);
+        i.expand = (d && d.expand) || [];
+      });
+      return issues;
+    }
+
+    // 生成判断函数：问题的该自定义字段是否为指定选项；项目里没有这个字段返回 null
+    function customMatcher(tpl, cat) {
+      const field = cat.fields.map((n) => tpl.find((f) => f.fieldName === n)).find(Boolean);
+      if (!field) return null;
+      const opt = (field.CustomFieldOptions || []).find((o) => o.customValue === cat.value);
+      const match = (issue) => (issue.expand || []).some((e) => e.customField === field.fieldId
+        && (e.customValue === cat.value || (opt && String(e.stringValue) === String(opt.id))));
+      return { match, field, opt };
+    }
+
+    let weeklySeq = 0;
+    let lastWeekly = null;
+
+    async function runWeekly() {
+      showError('');
+      const projectId = projectCombo.value;
+      if (!projectId) return showError('请先选择项目');
+      const pkey = projectCombo.item.pkey;
+      const pname = projectCombo.item.label;
+      const w = currentPeriod();
+      if (!w) return showError('请选择统计周期（开始和结束日期）');
+      const period = [w.start, w.end];
+      const seq = ++weeklySeq;
+      const btn = $('weeklyBtn');
+      btn.disabled = true;
+      btn.textContent = '查询中…';
+      try {
+        const createdF = { statuses: VALID, created: period };
+        const rejectedF = { statuses: REJECTED, created: period };
+        const [tpl, created, rejected] = await Promise.all([
+          projectTemplate(projectId),
+          listIssues(projectId, createdF).then((list) => withExpand(list, pkey)),
+          listIssues(projectId, rejectedF),
+        ]);
+        if (seq !== weeklySeq) return;   // 期间又切了周 / 项目，丢弃旧结果
+
+        const cats = WEEKLY_CATS.map((c) => {
+          if (c.key === 'rejected') return { ...c, issues: rejected, listUrl: ctcListUrl(pkey, rejectedF) };
+          const m = customMatcher(tpl, c);
+          if (!m) return { ...c, missingField: true, issues: [] };
+          // CTC 列表页的自定义字段筛选参数：<字段数字ID>=<选项ID>，如 10201=10207
+          const listUrl = ctcListUrl(pkey, createdF) + (m.opt ? `&${m.field.fieldId}=${m.opt.id}` : '');
+          return { ...c, issues: created.filter(m.match), listUrl };
+        });
+        lastWeekly = { pname, w, cats };
+        renderWeekly(pkey);
+        stampTime('weeklyTime');
+      } catch (e) {
+        if (seq === weeklySeq) showError(e.message);
+      } finally {
+        if (seq === weeklySeq) {
+          btn.disabled = false;
+          btn.textContent = '查询';
+        }
+      }
+    }
+
+    function renderWeekly(pkey) {
+      const { pname, w, cats } = lastWeekly;
+      const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
+      const issueUrl = (i) => ctcIssueUrl(i, pkey, projectCombo.value);
+      const sevColor = { 致命: 'text-red-700', 严重: 'text-red-600', 一般: 'text-amber-600' };
+
+      $('weeklyCards').innerHTML = cats.map((c) => `
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+          <button type="button" data-weekly-jump="${c.key}" class="text-xs text-slate-500 hover:text-blue-600" title="跳到下方列表">${esc(c.name)} ↓</button>
+          ${c.missingField
+            ? '<div class="mt-1 text-2xl font-semibold font-mono text-slate-300">—</div><div class="text-xs text-slate-400 mt-1">项目无此字段</div>'
+            : `<a href="${esc(c.listUrl)}" target="_blank" title="在 CTC 打开列表" class="block mt-1 text-2xl font-semibold font-mono ${c.issues.length ? 'text-blue-600' : 'text-slate-300'} hover:underline">${c.issues.length}</a>`}
+        </div>`).join('');
+
+      $('weeklyLists').innerHTML = cats.map((c) => `
+        <section id="weekly-${c.key}" class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="font-semibold text-slate-800">${c.missingField ? esc(c.name) : `<a href="${esc(c.listUrl)}" target="_blank" class="hover:text-blue-600" title="在 CTC 打开列表">${esc(c.name)} <span class="font-mono text-blue-600 hover:underline">${c.issues.length}</span> ↗</a>`}</div>
+          </div>
+          ${c.missingField ? `<p class="text-sm text-slate-400">该项目没有「${esc(c.fields.join('」/「'))}」字段</p>`
+            : !c.issues.length ? `<p class="text-sm text-slate-400">${esc(w.short)}没有${esc(c.name)}</p>` : `
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-2 pr-3 font-normal whitespace-nowrap">编号</th><th class="py-2 pr-3 font-normal">标题</th>
+                  <th class="py-2 pr-3 font-normal whitespace-nowrap">状态</th><th class="py-2 pr-3 font-normal whitespace-nowrap">严重程度</th>
+                  <th class="py-2 pr-3 font-normal whitespace-nowrap">优先级</th><th class="py-2 pr-3 font-normal whitespace-nowrap">报告人</th>
+                  <th class="py-2 font-normal whitespace-nowrap">经办人</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">${c.issues.map((i) => `
+                <tr>
+                  <td class="py-2 pr-3 whitespace-nowrap"><a href="${issueUrl(i)}" target="_blank" class="font-mono text-blue-600 hover:underline">${esc(issueKey(i))}</a></td>
+                  <td class="py-2 pr-3 text-slate-700 min-w-[16rem]"><a href="${issueUrl(i)}" target="_blank" class="text-blue-600 hover:underline">${esc(i.summary || '')}</a></td>
+                  <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.issueStatusName || '')}</td>
+                  <td class="py-2 pr-3 whitespace-nowrap ${sevColor[i.severityName] || 'text-slate-500'}">${esc(i.severityName || '')}</td>
+                  <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.priorityName || '')}</td>
+                  <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.reporterName || '')}</td>
+                  <td class="py-2 whitespace-nowrap text-slate-500">${esc(i.assigneeName || '未指派')}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </section>`).join('');
+
+      $('weeklyText').textContent = [
+        `${pname} ${w.title}`,
+        ...cats.flatMap((c, n) => c.missingField ? [`${n + 1}.${c.name}：项目无此字段`] : [
+          `${n + 1}.${c.name}：${c.issues.length}`,
+          ...c.issues.map((i) => `   - ${issueKey(i)} ${i.summary}（${i.issueStatusName}，${i.severityName}） ${issueUrl(i)}`),
+        ]),
+      ].join('\n');
+      $('weeklyResult').classList.remove('hidden');
+    }
+
     // ---------- 飞书登录（与 ctcmcpctl login 同一套流程） ----------
     const CTC_MCP = 'https://ctc-mcp.makeblock.com';
     let loginTimer = null;
@@ -1596,6 +2293,7 @@
           await request('/v1/allProjects');   // 确认 token 能访问 CTC 再保存
           saveToken(token);
           loadProjects();
+          loadUsers();
           stopLogin();
           setLoginMsg('登录成功 ✓', 'text-green-600');
         } catch (e) {
@@ -1639,12 +2337,33 @@
       $('loginBtn').textContent = token ? '重新登录' : '飞书登录';
     }
 
+    // ---------- 推送配置入口：本机配置页（127.0.0.1:8766）在运行就打开，否则提示怎么启动 ----------
+    const PUSH_CONFIG_URL = 'http://127.0.0.1:8766';
+    $('pushConfigBtn').addEventListener('click', async () => {
+      const win = window.open('about:blank', '_blank');   // 先在点击里开窗，避免被浏览器拦截
+      let ok = false;
+      try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 1500);
+        ok = (await fetch(PUSH_CONFIG_URL + '/api/ping', { signal: ctrl.signal })).ok;
+      } catch (e) {
+        ok = false;
+      }
+      if (ok && win) {
+        win.location.href = PUSH_CONFIG_URL;
+      } else {
+        if (win) win.close();
+        $('pushConfigTip').classList.remove('hidden');
+      }
+    });
+    $('pushConfigClose').addEventListener('click', () => $('pushConfigTip').classList.add('hidden'));
+
     // ---------- 事件 ----------
 
     $('tokenInput').value = store.get(TOKEN_KEY);
     refreshTokenState();
 
-    $('saveTokenBtn').addEventListener('click', () => { saveToken($('tokenInput').value); loadProjects(); });
+    $('saveTokenBtn').addEventListener('click', () => { saveToken($('tokenInput').value); loadProjects(); loadUsers(); });
     $('loginBtn').addEventListener('click', startLogin);
     $('toggleTokenBtn').addEventListener('click', (e) => {
       const input = $('tokenInput');
@@ -1654,6 +2373,25 @@
     $('queryBtn').addEventListener('click', runQuery);
     $('sumBtn').addEventListener('click', runSummary);
     $('progBtn').addEventListener('click', runProgress);
+    $('peopleBtn').addEventListener('click', runPeople);
+    $('peopleCopyBtn').addEventListener('click', (e) => copy(peopleTsv(), e.target));
+    $('peopleClearBtn').addEventListener('click', () => savePeopleList([]));
+    $('peopleTable').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-case-detail]');
+      if (btn) toggleCaseDetail(btn);
+    });
+    $('peopleChips').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-remove-person]');
+      if (!btn) return;
+      savePeopleList(loadPeopleList().filter((u) => String(u.id) !== btn.dataset.removePerson));
+    });
+    $('peoplePresets').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-preset]');
+      if (btn) savePeopleList(PEOPLE_PRESETS[Number(btn.dataset.preset)].people.map((u) => ({ ...u })));
+    });
+    renderPeopleChips();
+    renderPeoplePresets();
+    loadUsers();
     $('sumCopyBtn').addEventListener('click', (e) => copy($('sumText').textContent, e.target));
     $('sumRisk').addEventListener('input', () => { renderSummaryText(); saveSummaryForm(); });
     $('contentChips').addEventListener('click', (e) => {
@@ -1681,6 +2419,35 @@
       btn.closest('.mod-tree').querySelectorAll('details.mod-node').forEach((d) => { d.open = open; });
     });
     $('progCopyBtn').addEventListener('click', (e) => copy($('progText').textContent, e.target));
+    fillWeekSelect();
+    $('weekRangeText').textContent = selectedWeek().range;
+    $('weekNextBtn').disabled = true;
+    $('weekSelect').addEventListener('change', onWeekChange);
+    $('weekPrevBtn').addEventListener('click', () => shiftWeek(-1));
+    $('weekNextBtn').addEventListener('click', () => shiftWeek(1));
+    $('weekNowBtn').addEventListener('click', () => { $('weekSelect').selectedIndex = 0; onWeekChange(); });
+    initWeeklyPeriod();
+    $('weeklyModes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mode]');
+      if (b && b.dataset.mode !== weeklyMode) setWeeklyMode(b.dataset.mode);
+    });
+    $('weeklyPresets').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-preset]');
+      if (b) applyRangePreset(b.dataset.preset);
+    });
+    $('weeklyBtn').addEventListener('click', runWeekly);
+    $('weeklyCopyBtn').addEventListener('click', (e) => copy($('weeklyText').textContent, e.target));
+    // 卡片跳到对应列表；不改 hash，否则会触发 Tab 切换
+    $('weeklyCards').addEventListener('click', (e) => {
+      const a = e.target.closest('[data-weekly-jump]');
+      if (!a) return;
+      e.preventDefault();
+      $('weekly-' + a.dataset.weeklyJump).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    // 第一次切到每周数据时自动查一次
+    document.querySelector('.query-tab[data-target="weekly"]').addEventListener('click', () => {
+      if (!lastWeekly && projectCombo.value) runWeekly();
+    });
     loadProjects();
     $('copyTextBtn').addEventListener('click', (e) => copy($('reportText').textContent, e.target));
     $('copyJsonBtn').addEventListener('click', (e) => copy(JSON.stringify(lastJson, null, 2), e.target));
@@ -1694,8 +2461,10 @@
         if (!ids.includes(id)) id = ids[0];
         document.querySelectorAll('.query-section').forEach((s) => s.classList.toggle('hidden', s.id !== id));
         document.querySelectorAll('.query-tab').forEach((b) => b.classList.toggle('active', b.dataset.target === id));
-        document.getElementById('periodRow').classList.toggle('hidden', id === 'close-rate');
-        document.getElementById('periodHint').classList.toggle('hidden', id === 'close-rate');
+        // 版本关闭率不需要测试周期；每周数据按自然周、不限版本，版本和周期都不需要
+        document.getElementById('periodRow').classList.toggle('hidden', id === 'close-rate' || id === 'weekly');
+        document.getElementById('periodHint').classList.toggle('hidden', id === 'close-rate' || id === 'weekly');
+        document.getElementById('versionBlock').classList.toggle('hidden', id === 'weekly');
       }
       document.querySelectorAll('.query-tab').forEach((b) => b.addEventListener('click', () => {
         history.replaceState(null, '', '#' + b.dataset.target);

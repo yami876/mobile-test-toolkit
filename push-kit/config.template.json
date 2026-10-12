@@ -1,0 +1,33 @@
+{
+  "ctc": {
+    "projectId": null,
+    "pkey": "",
+    "projectName": ""
+  },
+  "presets": [],
+  "people": {
+    "enabled": false,
+    "webhook": "",
+    "secret": "",
+    "version": "all",
+    "regVersion": "all",
+    "people": [],
+    "schedule": [
+      { "time": "09:00", "slot": "morning" },
+      { "time": "18:00", "slot": "evening" }
+    ],
+    "pageUrl": "https://yami876.github.io/mobile-test-toolkit/tools/ctc-query.html#people"
+  },
+  "progress": {
+    "enabled": false,
+    "webhook": "",
+    "secret": "",
+    "version": "iterating",
+    "regVersion": "same",
+    "exclude": [],
+    "schedule": [
+      { "time": "18:00" }
+    ],
+    "pageUrl": "https://yami876.github.io/mobile-test-toolkit/tools/ctc-query.html#progress"
+  }
+}
