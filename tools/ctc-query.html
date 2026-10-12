@@ -148,6 +148,14 @@
         </div>
       </div>
       <p id="periodHint" class="text-xs text-slate-400 mt-2">回归关闭 / 回归打开 / 剩余回归按「回归统计版本」统计，默认已发布版本；选「所有版本」则不限版本。</p>
+      <div id="excludeRow" class="mt-3 pt-3 border-t border-slate-100">
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-slate-500">「已发布版本」排除：</span>
+          <span id="excludeChips" class="flex flex-wrap gap-1.5"><span class="text-slate-400">选择项目后加载</span></span>
+          <button type="button" id="excludeClearBtn" class="hidden text-slate-400 hover:text-red-600">清除排除</button>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">点版本号排除（变成删除线），所有用到「已发布版本」的统计都会去掉这些版本；按项目保存在本机。</p>
+      </div>
     </section>
 
     <!-- 查询类型 Tab：新增查询时在这里加按钮，下面加同 id 的 section -->
@@ -604,7 +612,52 @@
       if (vid === 'all') return () => true;
       if (!isVersionGroup(vid)) return (pv) => pv === vid;
       const released = new Set((await versionOptions(projectId)).filter((v) => v.released).map((v) => v.id));
-      return vid === RELEASED ? (pv) => released.has(pv) : (pv) => !released.has(pv);
+      if (vid === RELEASED) {
+        const excluded = new Set(excludedVersions(projectId));
+        return (pv) => released.has(pv) && !excluded.has(pv);
+      }
+      return (pv) => !released.has(pv);
+    }
+
+    // ---- 「已发布版本」排除指定版本（如新发布的 V1.6.0 还不想算进主线）
+    const EXCLUDE_KEY = (projectId) => `ctc-query.excludeVersions.${projectId}`;
+    function excludedVersions(projectId) {
+      try { return JSON.parse(store.get(EXCLUDE_KEY(projectId)) || '[]'); } catch (e) { return []; }
+    }
+    // 有排除时，把筛选条件里的 -1（已发布版本）展开成「已发布版本 − 排除版本」的具体版本 ID
+    function expandVersions(versions) {
+      const projectId = projectCombo.value;
+      const excluded = excludedVersions(projectId);
+      if (!versions || !versions.includes(RELEASED) || !excluded.length || !versionCache[projectId]) return versions;
+      const ids = versionCache[projectId].filter((v) => v.released && !excluded.includes(v.id)).map((v) => v.id);
+      return [...new Set([...versions.filter((v) => v !== RELEASED), ...ids])];
+    }
+    // 报告里「已发布版本」的显示名，有排除时带上「不含 xxx」
+    function releasedLabel() {
+      const projectId = projectCombo.value;
+      const excluded = excludedVersions(projectId);
+      if (!excluded.length) return '已发布版本';
+      const names = new Map((versionCache[projectId] || []).map((v) => [v.id, v.vname]));
+      return `已发布版本（不含${excluded.map((id) => names.get(id) || id).join('、')}）`;
+    }
+
+    function renderExcludeChips() {
+      const projectId = projectCombo.value;
+      const list = (versionCache[projectId] || []).filter((v) => v.released);
+      const excluded = excludedVersions(projectId);
+      $('excludeChips').innerHTML = list.length ? list.map((v) => {
+        const off = excluded.includes(v.id);
+        return `<button type="button" data-exclude="${v.id}" title="${off ? '已排除，点击恢复' : '点击排除'}"
+          class="px-2 py-0.5 rounded-full border transition ${off ? 'border-red-200 bg-red-50 text-red-500 line-through' : 'border-slate-300 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600'}">${esc(v.vname)}</button>`;
+      }).join('') : '<span class="text-slate-400">该项目没有已发布版本</span>';
+      $('excludeClearBtn').classList.toggle('hidden', !excluded.length);
+    }
+
+    function setExcluded(ids) {
+      store.set(EXCLUDE_KEY(projectCombo.value), JSON.stringify(ids));
+      renderExcludeChips();
+      // 版本关闭率有结果时直接按新口径重查
+      if (!$('close-rate').classList.contains('hidden') && !$('resultSection').classList.contains('hidden')) runQuery();
     }
 
     async function resolveVersion(projectId, ref) {
@@ -620,7 +673,7 @@
     }
 
     async function count(projectId, versions, statuses, severity) {
-      const body = { project: [projectId], versions, issueStatus: statuses, pageSize: 1, pageIndex: 1 };
+      const body = { project: [projectId], versions: expandVersions(versions), issueStatus: statuses, pageSize: 1, pageIndex: 1 };
       if (severity) body.severity = [severity];
       const data = await request('/v1/issues/list', { method: 'POST', body });
       return data.count;
@@ -710,12 +763,12 @@
         const [cur, rel] = await Promise.all([collect(projectId, verFilter(vid)), collect(projectId, [RELEASED])]);
 
         const ok = [cur, rel].every((s) => s.pass_rate && s.pass_a && s.pass_s);
-        const lines = [ok ? '测试通过' : '测试不通过', ...block(verText(vid, vname), cur), ...block('已发布版本', rel)];
+        const lines = [ok ? '测试通过' : '测试不通过', ...block(verText(vid, vname), cur), ...block(releasedLabel(), rel)];
         lastJson = { version: vname, version_id: vid, current: cur, released: rel };
 
         $('verdict').textContent = (ok ? '✅ ' : '❌ ') + (ok ? '测试通过' : '测试不通过');
         $('verdict').className = 'text-xl font-bold ' + (ok ? 'text-green-600' : 'text-red-600');
-        $('statCards').innerHTML = card(`${vname} 版本（ID ${vid}）`, cur) + card('已发布版本', rel);
+        $('statCards').innerHTML = card(`${vname} 版本（ID ${vid}）`, cur) + card(releasedLabel(), rel);
         $('reportText').textContent = lines.join('\n');
         $('resultSection').classList.remove('hidden');
         stampTime('queryTime');
@@ -872,6 +925,7 @@
 
     async function fillVersionList() {
       versionCombo.setItems([], '版本加载中…');
+      $('excludeChips').innerHTML = '<span class="text-slate-400">加载中…</span>';
       try {
         const list = await versionOptions(projectCombo.value);
         versionCombo.setItems([...VERSION_GROUPS, ...list.map((v) => ({
@@ -880,6 +934,7 @@
           sub: v.released ? '' : '未发布',
         }))], '可输入版本号筛选');
         fillRegVersionList(list);
+        renderExcludeChips();
       } catch (e) {
         versionCombo.setItems([], '版本加载失败');
         showError(e.message);
@@ -912,7 +967,7 @@
 
     function issueBody(projectId, f) {
       const body = { project: [projectId], issueStatus: f.statuses, pageSize: 1, pageIndex: 1 };
-      if (f.versions) body.versions = f.versions;   // 不传 = 所有版本
+      if (f.versions) body.versions = expandVersions(f.versions);   // 不传 = 所有版本
       if (f.created) body.createdAt = f.created;   // ['YYYY-MM-DD', 'YYYY-MM-DD']，两端都含
       if (f.updated) body.updatedAt = f.updated;
       if (f.severities) body.severity = f.severities;
@@ -953,7 +1008,7 @@
     // 与 CTC 列表页筛选参数一致，方便点开核对
     function ctcListUrl(pkey, f) {
       const q = new URLSearchParams();
-      (f.versions || []).forEach((v) => q.append('versions', v));
+      (expandVersions(f.versions) || []).forEach((v) => q.append('versions', v));
       (f.created || []).forEach((d) => q.append('createdAt', d));
       (f.updated || []).forEach((d) => q.append('updatedAt', d));
       f.statuses.forEach((s) => q.append('issueStatus', s));
@@ -1297,7 +1352,7 @@
 
         const link = (url, n) => `<a href="${esc(url)}" target="_blank" class="text-blue-600 hover:underline font-mono">${n}</a>`;
         const cond = (f) => [
-          !f.versions ? '所有版本' : f.versions[0] === RELEASED ? '已发布版本' : f.versions[0] === vid ? vname : reg.label,
+          !f.versions ? '所有版本' : f.versions[0] === RELEASED ? releasedLabel() : f.versions[0] === vid ? vname : regLabel(reg),
           f.created ? `创建 ${md(start)}～${md(end)}` : '',
           f.updated ? `更新 ${md(start)}～${md(end)}` : '',
           f.regressFail ? '回归失败' : f.statuses === OPEN ? '未关闭' : f.statuses === CLOSED ? '已关闭' : '有效',
@@ -1329,6 +1384,7 @@
     const regVersionCombo = createCombo('regVersion', () => saveSummaryForm());
 
     const ALL_VERSIONS = 'all';   // 回归统计版本选「所有版本」时不加版本条件（与版本下拉的「所有版本」同值）
+    const regLabel = (reg) => (reg.value === RELEASED ? releasedLabel() : reg.label);
     const regVersions = (reg) => (reg.value === ALL_VERSIONS ? undefined : [reg.value]);
 
     function fillRegVersionList(list) {
@@ -1568,9 +1624,9 @@
       const rows = [
         ...issueBlock('created', `${vname}新增问题`, `${vname} · 创建 ${md(start)}～${md(end)} · 有效`, { versions: verFilter(vid), statuses: VALID, created: period }),
         ...issueBlock('pending', `${vname}待处理问题`, `${vname} · 新创建、处理中`, { versions: verFilter(vid), statuses: PENDING }),
-        { key: 'closed', name: '回归关闭数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
-        { key: 'reopened', name: '回归打开数', cond: `${reg.label} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
-        { key: 'remain', name: '剩余回归数', cond: `${reg.label} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: regVersions(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] }, groupBy: ['reporter'] },
+        { key: 'closed', name: '回归关闭数', cond: `${regLabel(reg)} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
+        { key: 'reopened', name: '回归打开数', cond: `${regLabel(reg)} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
+        { key: 'remain', name: '剩余回归数', cond: `${regLabel(reg)} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: regVersions(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] }, groupBy: ['reporter'] },
       ];
 
       {
@@ -1715,7 +1771,7 @@
           '一、Bug 情况',
           ...blockLines(1, 'created'),
           ...blockLines(2, 'pending'),
-          `3.回归关闭数：${R.closed.count}（${reg.label}）`,
+          `3.回归关闭数：${R.closed.count}（${regLabel(reg)}）`,
           ...groupLines(R.closed),
           `4.回归打开数：${R.reopened.count}`,
           ...groupLines(R.reopened),
@@ -2427,6 +2483,14 @@
     $('weekNextBtn').addEventListener('click', () => shiftWeek(1));
     $('weekNowBtn').addEventListener('click', () => { $('weekSelect').selectedIndex = 0; onWeekChange(); });
     initWeeklyPeriod();
+    $('excludeChips').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-exclude]');
+      if (!b) return;
+      const id = Number(b.dataset.exclude);
+      const ids = excludedVersions(projectCombo.value);
+      setExcluded(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+    });
+    $('excludeClearBtn').addEventListener('click', () => setExcluded([]));
     $('weeklyModes').addEventListener('click', (e) => {
       const b = e.target.closest('[data-mode]');
       if (b && b.dataset.mode !== weeklyMode) setWeeklyMode(b.dataset.mode);
@@ -2465,6 +2529,7 @@
         document.getElementById('periodRow').classList.toggle('hidden', id === 'close-rate' || id === 'weekly');
         document.getElementById('periodHint').classList.toggle('hidden', id === 'close-rate' || id === 'weekly');
         document.getElementById('versionBlock').classList.toggle('hidden', id === 'weekly');
+        document.getElementById('excludeRow').classList.toggle('hidden', id === 'weekly');
       }
       document.querySelectorAll('.query-tab').forEach((b) => b.addEventListener('click', () => {
         history.replaceState(null, '', '#' + b.dataset.target);
