@@ -72,13 +72,13 @@ function taskList(config) {
   const tasks = [];
   if (config.people.enabled !== false) {
     (config.people.schedule || []).forEach((s) => tasks.push({
-      name: `people-${s.time.replace(':', '')}-${s.slot}-${TAG}`, time: s.time, args: `ctc-daily.mjs --job people --slot ${s.slot}`,
+      name: `people-${s.time.replace(':', '')}-${s.slot}-${TAG}`, time: s.time, args: `ctc-daily.mjs --job people --slot ${s.slot} --at ${s.time}`,
       desc: `人员数据（${s.slot === 'evening' ? '当天' : '前一个工作日'}）`,
     }));
   }
   if (config.progress.enabled !== false) {
     (config.progress.schedule || []).forEach((s) => tasks.push({
-      name: `progress-${s.time.replace(':', '')}-${TAG}`, time: s.time, args: 'ctc-daily.mjs --job progress', desc: '版本进度',
+      name: `progress-${s.time.replace(':', '')}-${TAG}`, time: s.time, args: `ctc-daily.mjs --job progress --at ${s.time}`, desc: '版本进度',
     }));
   }
   return tasks;
@@ -92,7 +92,8 @@ async function applySchedule() {
     ...tasks.map((t) => [
       `$a = New-ScheduledTaskAction -Execute ${psq(NODE)} -Argument ${psq(t.args)} -WorkingDirectory ${psq(DIR)}`,
       `$t = New-ScheduledTaskTrigger -Daily -At ${psq(t.time)}`,
-      `$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30)`,
+      // StartWhenAvailable：到点时电脑关机 / 睡眠，开机或唤醒后补推（脚本按 --at 判断原计划是哪天）
+      `$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30)`,
       `Register-ScheduledTask -TaskPath ${psq(TASK_PATH)} -TaskName ${psq(t.name)} -Action $a -Trigger $t -Settings $s -Description ${psq('CTC 数据推送：' + t.desc + '（非工作日脚本自动跳过）')} | Out-Null`,
     ].join('; ')),
     'Write-Output "OK"',

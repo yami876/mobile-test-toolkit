@@ -210,7 +210,7 @@ async function peopleJob(today) {
   let title;
   if (slot === 'evening') {
     start = end = ymd(today);
-    title = `📊 人员数据日报 · ${md(start)}（截至 ${hm(today)}）`;
+    title = `📊 人员数据日报 · ${md(start)}（${catchUp && ymd(today) !== ymd(new Date()) ? '全天' : `截至 ${hm(new Date())}`}）`;
   } else {
     const prev = await previousWorkday(today);
     const yesterday = new Date(today);
@@ -266,7 +266,7 @@ async function peopleJob(today) {
   const total = Object.fromEntries(COLS.map(([k]) => [k, rows.reduce((s, r) => s + r[k], 0)]));
   const line = (r, who) => `**${r.name}**：` + COLS.map(([k, label]) =>
     `${label} ${bugCols[k] ? link(r[k], { ...bugCols[k], reporters: who }) : r[k]}`).join(' ｜ ');
-  return card(title, [
+  return card(title + (catchUp ? '（补推）' : ''), [
     mdEl(`**统计周期**：${start === end ? md(start) : `${md(start)}～${md(end)}`}　**项目**：${projectName}　**版本**：${await versionName(version)}　**回归统计**：${await versionName(regVersion)}`),
     { tag: 'hr' },
     mdEl(rows.map((r) => line(r, [r.id])).join('\n')),
@@ -332,7 +332,7 @@ async function progressJob(today) {
   const title = conf === 'iterating'
     ? `🚦 版本进度 · ${md(ymd(today))}（${versions.length} 个迭代中版本）`
     : `🚦 版本进度 · ${md(ymd(today))}`;
-  return card(title, elements);
+  return card(title + (catchUp ? '（补推）' : ''), elements);
 }
 
 // 单个版本的进度段落
@@ -429,7 +429,18 @@ if (args.includes('--list-iterating')) {
 }
 
 // ---------- 主流程 ----------
-const today = new Date();
+// 定时任务会传 --at 计划时间。到点时电脑关机 / 睡眠，开机后才补跑，
+// 这时要按原计划那天统计：计划时间比现在晚，说明补的是前一天（或更早）那次
+function plannedRun() {
+  const now = new Date();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(arg('--at', ''));
+  if (!m) return { today: now, catchUp: false };
+  const planned = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(m[1]), Number(m[2]));
+  if (planned > now) planned.setDate(planned.getDate() - 1);
+  return { today: planned, catchUp: now - planned > 15 * 60 * 1000 };   // 晚了 15 分钟以上算补推
+}
+const { today, catchUp } = plannedRun();
+if (catchUp) log(`补推：原计划 ${today.toLocaleString('zh-CN', { hour12: false })}`);
 try {
   if (!force && jobConf.enabled === false) {
     log('已在配置里停用，跳过');

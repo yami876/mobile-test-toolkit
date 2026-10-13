@@ -132,16 +132,22 @@ if (-not $NoShortcut) {
   Ok "桌面快捷方式：$lnk"
 }
 
-# ---------- 5. 已有定时任务改用当前的 Node ----------
+# ---------- 5. 已有定时任务改用当前的 Node，并开启错过后补推 ----------
 # 只处理属于本安装目录的任务（同一台电脑装了多份时互不影响）
 $tasks = @(Get-ScheduledTask -TaskPath '\CTCDaily\' -ErrorAction SilentlyContinue |
   Where-Object { $_.Actions[0].WorkingDirectory -eq $InstallDir })
 if ($tasks.Count) {
-  Step '更新已有定时任务使用的 Node 路径'
+  Step '更新已有定时任务（Node 路径、错过后开机补推）'
   foreach ($t in $tasks) {
-    $a = $t.Actions[0]
-    $new = New-ScheduledTaskAction -Execute $node -Argument $a.Arguments -WorkingDirectory $InstallDir
-    Set-ScheduledTask -TaskPath '\CTCDaily\' -TaskName $t.TaskName -Action $new | Out-Null
+    $arg = $t.Actions[0].Arguments
+    # 旧版任务没有 --at：补上计划时间，补推时脚本才知道原计划是哪天
+    if ($arg -notmatch '--at ' -and $t.Triggers.Count) {
+      $arg = "$arg --at $(([datetime]$t.Triggers[0].StartBoundary).ToString('HH:mm'))"
+    }
+    $new = New-ScheduledTaskAction -Execute $node -Argument $arg -WorkingDirectory $InstallDir
+    $set = $t.Settings
+    $set.StartWhenAvailable = $true
+    Set-ScheduledTask -TaskPath '\CTCDaily\' -TaskName $t.TaskName -Action $new -Settings $set | Out-Null
   }
   Ok "已更新 $(@($tasks).Count) 个定时任务"
 }
