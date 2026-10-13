@@ -137,6 +137,10 @@ http.createServer(async (req, res) => {
       });
       return res.end(req.method === 'OPTIONS' ? '' : '{"ok":true}');
     }
+    // 配置相关的 POST 只接受 JSON：别的网站发不了带 JSON 类型的跨域请求（会被预检拦下），防止被偷偷改配置
+    if (req.method === 'POST' && !String(req.headers['content-type'] || '').includes('application/json')) {
+      return send(res, 415, { error: 'Content-Type must be application/json' });
+    }
     if (req.method === 'GET' && url.pathname === '/') {
       return send(res, 200, fs.readFileSync(path.join(DIR, 'config.html'), 'utf8'), 'text/html; charset=utf-8');
     }

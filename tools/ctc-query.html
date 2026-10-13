@@ -131,7 +131,10 @@
       <!-- 版本进度、测试小结共用；版本关闭率不需要，切过去时隐藏 -->
       <div id="periodRow" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
         <label class="block">
-          <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天）</span>
+          <span class="flex items-center justify-between">
+            <span class="text-xs text-slate-500">测试周期（点开始日期、再点结束日期，含当天；版本进度可不选，表示整个版本）</span>
+            <button type="button" id="periodClear" class="text-xs text-slate-400 hover:text-red-600">清空</button>
+          </span>
           <input id="sumRange" type="text" readonly placeholder="选择日期范围"
             class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 bg-white cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
           <input id="sumStart" type="hidden" />
@@ -188,10 +191,10 @@
     <!-- ============== 版本关闭率 ============== -->
     <section id="close-rate" class="query-section space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-slate-500">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题。选择版本后自动查询。</p>
-      <span class="flex items-center gap-3">
-        <span id="queryTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
-        <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+      <p class="text-sm text-slate-500 flex-1 min-w-0">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题。选择版本后自动查询。</p>
+      <span class="flex items-center gap-3 shrink-0 ml-auto">
+        <span id="queryTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+        <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
       </span>
     </div>
 
@@ -204,10 +207,10 @@
         </div>
       </div>
       <div id="statCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-      <div>
-        <div class="text-xs text-slate-500 mb-1">报告结论（可直接粘贴进测试报告）</div>
-        <pre id="reportText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
-      </div>
+      <details>
+        <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700">📄 报告结论文字版（点击展开；右上角「复制报告结论」不用展开也能复制）</summary>
+        <pre id="reportText" class="mt-2 bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </details>
     </section>
 
     <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
@@ -229,10 +232,10 @@
     <!-- ============== 版本进度 ============== -->
     <section id="progress" class="query-section hidden space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-slate-500">所选版本测试周期内的新增问题、当前待处理问题、回归情况，以及测试周期内该版本的测试计划执行情况和未执行用例模块。</p>
-      <span class="flex items-center gap-3">
-        <span id="progTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
-        <button id="progBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+      <p class="text-sm text-slate-500 flex-1 min-w-0">所选版本测试周期内的新增问题、当前待处理问题、回归情况，以及测试周期内该版本的测试计划执行情况和未执行用例模块。</p>
+      <span class="flex items-center gap-3 shrink-0 ml-auto">
+        <span id="progTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+        <button id="progBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
       </span>
     </div>
 
@@ -272,18 +275,18 @@
         </div>
       </section>
 
-      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-2">
-        <div class="text-xs text-slate-500">版本进度文字版（可直接粘贴）</div>
-        <pre id="progText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
-      </section>
+      <details class="bg-white rounded-lg border border-slate-200 px-6 py-4">
+        <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700">📄 版本进度文字版（点击展开；「复制版本进度」按钮不用展开也能复制）</summary>
+        <pre id="progText" class="mt-3 bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </details>
     </section>
 
     <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
       <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径</summary>
       <table class="mt-3 w-full text-left">
         <tbody class="divide-y divide-slate-100">
-          <tr><td class="py-1.5 w-32 text-slate-500">新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起；按经办人汇总数量；同样列出其中严重、高优、严重且高优问题</td></tr>
-          <tr><td class="py-1.5 text-slate-500">待处理问题</td><td>影响版本：所选版本；状态：新创建、处理中；按经办人汇总数量</td></tr>
+          <tr><td class="py-1.5 w-32 text-slate-500">新增问题</td><td>影响版本：所选版本；创建时间在测试周期内；状态：新创建、处理中、已解决、关闭、挂起；按报告人、经办人汇总数量；同样列出其中严重、高优、严重且高优问题</td></tr>
+          <tr><td class="py-1.5 text-slate-500">待处理问题</td><td>影响版本：所选版本；状态：新创建、处理中、挂起；按经办人汇总数量</td></tr>
           <tr><td class="py-1.5 text-slate-500">其中严重问题</td><td>新增 / 待处理问题中，严重程度：严重、致命</td></tr>
           <tr><td class="py-1.5 text-slate-500">其中高优问题</td><td>新增 / 待处理问题中，优先级：最高、高</td></tr>
           <tr><td class="py-1.5 text-slate-500">其中严重且高优</td><td>新增 / 待处理问题中，严重程度为严重、致命，且优先级为最高、高；逐条列出</td></tr>
@@ -335,10 +338,10 @@
           class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"></textarea>
       </label>
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-slate-400">工作日不填时自动计算（扣除法定节假日、计入调休补班），也可手动填写；新增 / 遗留按问题创建时间筛选，回归关闭按更新时间筛选；版本 Bug 情况和测试计划在「版本进度」里查看。</p>
-        <span class="flex items-center gap-3">
-          <span id="sumTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
-          <button id="sumBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">生成小结</button>
+        <p class="text-xs text-slate-400 flex-1 min-w-0">工作日不填时自动计算（扣除法定节假日、计入调休补班），也可手动填写；新增 / 遗留按问题创建时间筛选，回归关闭按更新时间筛选；版本 Bug 情况和测试计划在「版本进度」里查看。</p>
+        <span class="flex items-center gap-3 shrink-0 ml-auto">
+          <span id="sumTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+          <button id="sumBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">生成小结</button>
         </span>
       </div>
     </section>
@@ -348,7 +351,10 @@
         <div class="font-semibold text-slate-800">测试小结</div>
         <button id="sumCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制小结</button>
       </div>
-      <pre id="sumText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      <details>
+        <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700">📄 测试小结文字版（点击展开；右上角「复制小结」不用展开也能复制）</summary>
+        <pre id="sumText" class="mt-2 bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+      </details>
       <div>
         <div class="text-xs text-slate-500 mb-2">数据明细（点数字在 CTC 打开对应问题列表核对）</div>
         <div class="overflow-x-auto">
@@ -401,10 +407,10 @@
         <div id="peopleChips" class="flex flex-wrap gap-2 min-h-[2.5rem] items-center"></div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-slate-400">用例新增 / 更新按整个项目统计；用例执行、Bug 新增按所选版本统计；回归关闭 / 失败按「回归统计版本」统计，算在报告人头上。</p>
-        <span class="flex items-center gap-3 ml-auto">
-          <span id="peopleTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
-          <button id="peopleBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+        <p class="text-xs text-slate-400 flex-1 min-w-0">用例新增 / 更新按整个项目统计；用例执行、Bug 新增按所选版本统计；回归关闭 / 失败按「回归统计版本」统计，算在报告人头上。</p>
+        <span class="flex items-center gap-3 ml-auto shrink-0">
+          <span id="peopleTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+          <button id="peopleBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
         </span>
       </div>
     </section>
@@ -478,9 +484,9 @@
             </span>
           </span>
         </div>
-        <span class="flex items-center gap-3 ml-auto">
-          <span id="weeklyTime" class="text-xs text-slate-400 whitespace-nowrap"></span>
-          <button id="weeklyBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">查询</button>
+        <span class="flex items-center gap-3 ml-auto shrink-0">
+          <span id="weeklyTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+          <button id="weeklyBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
         </span>
       </div>
       <p class="text-xs text-slate-400 mt-3">按自然周（周一～周日）或自定义日期范围（含首尾两天）统计所选项目、不限版本的问题；切换周期或项目后自动查询。</p>
@@ -489,12 +495,41 @@
     <section id="weeklyResult" class="hidden space-y-4">
       <div id="weeklyCards" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
       <div id="weeklyLists" class="space-y-4"></div>
-      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-2">
-        <div class="flex items-center justify-between">
-          <div class="text-xs text-slate-500">每周数据文字版（可直接粘贴）</div>
-          <button id="weeklyCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded">复制</button>
+      <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="font-semibold text-slate-800">🔎 分析报告</div>
+          <div class="flex flex-wrap gap-2">
+            <button id="weeklyAiCopyBtn" class="px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded" title="把问题明细整理成提示词，粘贴给 Claude 等 AI 做更深入的原因分析">复制数据给 AI</button>
+          </div>
         </div>
-        <pre id="weeklyText" class="bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="text-sm font-medium text-slate-700">📋 Bug 分析表 <span id="bugTableNote" class="ml-2 text-xs font-normal text-slate-400"></span></div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="bugTableCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" title="带超链接复制，可直接粘贴到飞书文档 / 表格、Excel">复制表格</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[1100px] table-fixed text-sm text-left border border-slate-200">
+              <colgroup>
+                <col style="width:7%" /><col style="width:19%" /><col style="width:7%" /><col style="width:8%" /><col style="width:30%" /><col style="width:29%" />
+              </colgroup>
+              <thead class="bg-slate-50 text-slate-600">
+                <tr>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">涉及项目</th>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">Bug 标题 &amp; 链接</th>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">测试跟进人员</th>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">Bug 类别</th>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">用户反馈 / 漏测原因分析</th>
+                  <th class="px-3 py-2 font-medium border-b border-slate-200">改进措施</th>
+                </tr>
+              </thead>
+              <tbody id="bugAnalysisTable" class="divide-y divide-slate-100 align-top"></tbody>
+            </table>
+          </div>
+          <p class="text-xs text-slate-400">分析表不调 AI：结合开发填写的原因及解决方案、备注、评论、「测试是否漏测」等字段和用例库候选用例生成，查询后会自动读取评论和用例并更新。</p>
+        </div>
+
       </section>
     </section>
 
@@ -507,6 +542,7 @@
           <tr><td class="py-1.5 text-slate-500">漏测 Bug</td><td>创建时间在该周内；测试是否漏测：是；状态同上</td></tr>
           <tr><td class="py-1.5 text-slate-500">小迭代漏测 Bug</td><td>创建时间在该周内；测试小迭代漏测：是；状态同上</td></tr>
           <tr><td class="py-1.5 text-slate-500">拒绝 Bug</td><td>创建时间在该周内；状态：拒绝</td></tr>
+          <tr><td class="py-1.5 text-slate-500">拒绝原因归类</td><td>按原因文字的关键词依次匹配：重复问题（重复、同 XX-123）→ 非问题 / 设计如此（设计如此、符合预期、正常现象、非 bug、产品确认）→ 无法复现 → 环境 / 配置 / 操作问题 → 已修复 / 版本问题 → 外部原因（固件、系统、第三方、硬件、后端）；都不匹配为「其他」，没填为「未填写原因」</td></tr>
           <tr><td class="py-1.5 text-slate-500">说明</td><td>同一个问题可能同时属于多类（如既是用户反馈又是漏测），会在各类里都列出；项目里没有对应字段时该类显示「项目无此字段」</td></tr>
         </tbody>
       </table>
@@ -1105,7 +1141,7 @@
           input.parentNode.appendChild(el);
         });
         input.remove();
-        return { set(s, e) { startEl.value = s; endEl.value = e; } };
+        return { set(s, e) { startEl.value = s; endEl.value = e; }, clear() { startEl.value = ''; endEl.value = ''; } };
       }
       const fp = flatpickr(input, {
         mode: 'range',
@@ -1138,6 +1174,11 @@
           startEl.value = s;
           endEl.value = e;
           fp.setDate([s, e], false);
+        },
+        clear() {
+          startEl.value = '';
+          endEl.value = '';
+          fp.clear(false);
         },
       };
     }
@@ -1375,7 +1416,7 @@
     }
 
     // ---------- 版本进度：版本 Bug 情况 + 测试计划情况 ----------
-    const PENDING = [1, 3];               // 待处理：新创建、处理中
+    const PENDING = [1, 3, 10003];        // 待处理：新创建、处理中、挂起
     const HIGH_PRIORITY = [1, 2];         // 高优：最高、高
     const RESOLVED = [5];                 // 已解决
     const PLAN_STATUS = { Prepare: '未开始', Underway: '进行中', Done: '已完成' };
@@ -1420,12 +1461,14 @@
 
     async function loadPlans(projectId, versionId, start, end, details = true) {
       const inVersion = await planVersionMatcher(projectId, versionId);
-      const from = new Date(start + 'T00:00:00').getTime() / 1000;
-      const to = new Date(end + 'T23:59:59').getTime() / 1000;
+      const from = start ? new Date(start + 'T00:00:00').getTime() / 1000 : -Infinity;   // 不选周期 = 不限时间
+      const to = end ? new Date(end + 'T23:59:59').getTime() / 1000 : Infinity;
       const data = await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD });
       const plans = (data.list || []).filter((p) => {
+        if (!inVersion(p.projectVersionId)) return false;
+        if (!start) return true;
         const span = planSpan(p);
-        return inVersion(p.projectVersionId) && span && span.s <= to && span.e >= from;
+        return span && span.s <= to && span.e >= from;
       });
       if (!details) return plans;
       await Promise.all(plans.map(async (p) => {
@@ -1592,8 +1635,9 @@
       const end = $('sumEnd').value;
       if (!projectId) return showError('请先选择项目');
       if (!version) return showError('请先选择版本');
-      if (!start || !end) return showError('请选择测试周期（开始和结束日期）');
-      if (start > end) return showError('开始日期不能晚于结束日期');
+      // 测试周期可不选：不选表示整个版本（不限时间）
+      if ((start && !end) || (!start && end)) return showError('测试周期请同时选择开始和结束日期，或者点「清空」不限时间');
+      if (start && start > end) return showError('开始日期不能晚于结束日期');
       saveSummaryForm();
       const btn = $('progBtn');
       btn.disabled = true;
@@ -1613,20 +1657,24 @@
 
     // 版本 Bug 情况 + 测试计划情况：查询并渲染
     async function loadProgress({ projectId, vid, vname, pkey, start, end, reg }) {
-      const period = [start, end];
-      // 一组问题：总数（按经办人汇总）+ 其中严重 / 高优 / 严重且高优（逐条列出）
-      const issueBlock = (key, name, cond, f) => [
-        { key, name, cond, f, groupBy: ['assignee'] },
+      const hasPeriod = !!(start && end);
+      const period = hasPeriod ? [start, end] : undefined;   // undefined = 不加时间条件
+      const span = hasPeriod ? `${md(start)}～${md(end)}` : '';
+      const when = hasPeriod ? span : '全部';   // 写进标题的时间范围
+      // 一组问题：总数（按人汇总）+ 其中严重 / 高优 / 严重且高优（逐条列出）
+      const issueBlock = (key, name, cond, f, groupBy = ['assignee']) => [
+        { key, name, cond, f, groupBy },
         { key: key + 'Severe', name: '其中严重问题', cond: '严重、致命', f: { ...f, severities: SEVERE }, sub: true },
         { key: key + 'High', name: '其中高优问题', cond: '优先级 最高、高', f: { ...f, priorities: HIGH_PRIORITY }, sub: true },
         { key: key + 'Critical', name: '其中严重且高优问题', cond: '严重、致命 且 优先级 最高、高', f: { ...f, severities: SEVERE, priorities: HIGH_PRIORITY }, sub: true, critical: true },
       ];
       const rows = [
-        ...issueBlock('created', `${vname}新增问题`, `${vname} · 创建 ${md(start)}～${md(end)} · 有效`, { versions: verFilter(vid), statuses: VALID, created: period }),
-        ...issueBlock('pending', `${vname}待处理问题`, `${vname} · 新创建、处理中`, { versions: verFilter(vid), statuses: PENDING }),
-        { key: 'closed', name: '回归关闭数', cond: `${regLabel(reg)} · 更新 ${md(start)}～${md(end)} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
-        { key: 'reopened', name: '回归打开数', cond: `${regLabel(reg)} · 更新 ${md(start)}～${md(end)} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
-        { key: 'remain', name: '剩余回归数', cond: `${regLabel(reg)} · 更新于 ${md(start)} 之前 · 已解决`, f: { versions: regVersions(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore(start)] }, groupBy: ['reporter'] },
+        ...issueBlock('created', `${vname} ${when} 新增问题`, hasPeriod ? `${vname} · 创建 ${span} · 有效` : `${vname} · 全部时间 · 有效`, { versions: verFilter(vid), statuses: VALID, created: period }, ['reporter', 'assignee']),
+        ...issueBlock('pending', `${vname} 当前 待处理问题`, `${vname} · 新创建、处理中、挂起`, { versions: verFilter(vid), statuses: PENDING }),
+        { key: 'closed', name: `${regLabel(reg)} ${when} 回归关闭数`, cond: `${regLabel(reg)} · ${hasPeriod ? `更新 ${span}` : '全部时间'} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
+        { key: 'reopened', name: `${regLabel(reg)} ${when} 回归打开数`, cond: `${regLabel(reg)} · ${hasPeriod ? `更新 ${span}` : '全部时间'} · 回归失败`, f: { versions: regVersions(reg), statuses: VALID, updated: period, regressFail: 1 }, groupBy: ['reporter', 'assignee'] },
+        { key: 'remain', name: `${regLabel(reg)} ${hasPeriod ? `${md(start)} 之前` : '当前'} 剩余回归数`, cond: hasPeriod ? `${regLabel(reg)} · 更新于 ${md(start)} 之前 · 已解决` : `${regLabel(reg)} · 当前已解决（待回归）`,
+          f: { versions: regVersions(reg), statuses: RESOLVED, updated: hasPeriod ? ['2000-01-01', dayBefore(start)] : undefined }, groupBy: ['reporter'] },
       ];
 
       {
@@ -1691,7 +1739,8 @@
             version: vnames.get(p.projectVersionId) || p.projectVersionId || '—',
             stage: PLAN_STAGE[p.stage] || p.stage || '—',
             status: PLAN_STATUS[p.status] || p.status,
-            time: `${tsMd(span.s)}～${span.ended || span.planned ? tsMd(span.e) + (span.planned ? '（计划）' : '') : '—'}`,
+            // 不选测试周期时会列出还没开始、没填时间的计划
+            time: span ? `${tsMd(span.s)}～${span.ended || span.planned ? tsMd(span.e) + (span.planned ? '（计划）' : '') : '—'}` : '未设置时间',
             total, pass: st.pass || 0, fail: st.fail || 0, block: st.block || 0, prepare: st.prepare || 0,
             execRate: rate(executed, total), passRate: rate(st.pass || 0, executed),
             noStat: !p.stat,
@@ -1767,15 +1816,15 @@
           ];
         };
         $('progText').textContent = [
-          `版本进度（${vname}，${periodText(start, end)}）`,
+          `版本进度（${vname}，${hasPeriod ? periodText(start, end) : '全部时间'}）`,
           '一、Bug 情况',
           ...blockLines(1, 'created'),
           ...blockLines(2, 'pending'),
-          `3.回归关闭数：${R.closed.count}（${regLabel(reg)}）`,
+          `3.${R.closed.name}：${R.closed.count}`,
           ...groupLines(R.closed),
-          `4.回归打开数：${R.reopened.count}`,
+          `4.${R.reopened.name}：${R.reopened.count}`,
           ...groupLines(R.reopened),
-          `5.剩余回归数：${R.remain.count}`,
+          `5.${R.remain.name}：${R.remain.count}`,
           ...groupLines(R.remain),
           '二、测试计划',
           ...(planRows.length
@@ -2209,7 +2258,7 @@
         const [tpl, created, rejected] = await Promise.all([
           projectTemplate(projectId),
           listIssues(projectId, createdF).then((list) => withExpand(list, pkey)),
-          listIssues(projectId, rejectedF),
+          listIssues(projectId, rejectedF).then((list) => withExpand(list, pkey)),
         ]);
         if (seq !== weeklySeq) return;   // 期间又切了周 / 项目，丢弃旧结果
 
@@ -2221,7 +2270,7 @@
           const listUrl = ctcListUrl(pkey, createdF) + (m.opt ? `&${m.field.fieldId}=${m.opt.id}` : '');
           return { ...c, issues: created.filter(m.match), listUrl };
         });
-        lastWeekly = { pname, w, cats };
+        lastWeekly = { pname, w, cats, tpl };
         renderWeekly(pkey);
         stampTime('weeklyTime');
       } catch (e) {
@@ -2234,8 +2283,341 @@
       }
     }
 
+    // ---- 分析报告
+    // 自定义字段值（按字段名找）：选项类取选项名，长文本取文字；多选返回多个
+    function fieldValues(tpl, issue, name) {
+      const f = tpl.find((x) => x.fieldName === name);
+      if (!f) return [];
+      return (issue.expand || []).filter((e) => e.customField === f.fieldId)
+        .map((e) => String(e.customValue || e.textValue || '').trim()).filter(Boolean);
+    }
+
+    // 原因：「问题原因及解决方案」里【问题原因】那段，没有就取整段去掉模板标题，再没有取「备注」
+    function issueReason(tpl, issue) {
+      const text = fieldValues(tpl, issue, '问题原因及解决方案')[0] || '';
+      const m = /【问题原因】\s*[:：]?\s*([\s\S]*?)(?=【|$)/.exec(text);
+      let r = (m ? m[1] : text.replace(/【[^】]*】\s*[:：]?/g, ' ')).trim();
+      if (!r) r = fieldValues(tpl, issue, '备注')[0] || '';
+      return r.replace(/\s+/g, ' ').trim();
+    }
+
+    const REJECT_RULES = [
+      ['重复问题', /重复|同\s*[A-Za-z]+\d*-\d+|已有单|duplicate/i],
+      ['非问题 / 设计如此', /设计如此|需求如此|符合(预期|设计|需求)|正常(现象|逻辑)|非\s*(bug|问题)|不是\s*(bug|问题)|预期行为|产品确认|by\s*design/i],
+      ['无法复现', /无法复现|不能复现|复现不了|未复现|不复现|没复现/],
+      ['环境 / 配置 / 操作问题', /环境|配置|网络|账号|测试服|操作(错误|问题|不当)|使用方式|误操作/],
+      ['已修复 / 版本问题', /已修复|已解决|已优化|新版本|旧版本|版本问题/],
+      ['外部原因（固件 / 系统 / 第三方）', /固件|系统(限制|问题|原因|bug)|第三方|硬件|嵌入式|后端|服务端/i],
+    ];
+    const classifyReject = (reason) => (!reason ? '未填写原因' : (REJECT_RULES.find(([, re]) => re.test(reason)) || ['其他'])[0]);
+
+    // ---- Bug 分析表：每个 Bug 一行（同时属于多类的合并）；规则初稿按 CTC 字段生成，AI 结果另存为版本，不覆盖初稿
+    const CAT_LABEL = { feedback: '用户反馈', missed: '漏测', iterMissed: '小迭代漏测', rejected: '拒绝' };
+    const REJECT_MEASURE = {
+      '重复问题': '提单前先在 CTC 按关键词搜索同类问题，确认未提过再提单',
+      '非问题 / 设计如此': '提单前对照需求文档或与产品确认预期，必要时补充需求说明',
+      '无法复现': '提单时补充完整复现步骤、日志、录屏和环境信息，研发无法复现时当面复现确认',
+      '环境 / 配置 / 操作问题': '提单前确认测试环境、账号配置和操作步骤，排除环境因素',
+      '已修复 / 版本问题': '提单前确认测试包版本，用最新版本复测后再提',
+      '外部原因（固件 / 系统 / 第三方）': '先确认问题归属，转给对应团队（固件 / 后端 / 第三方）跟进',
+      '未填写原因': '请研发补充拒绝原因，测试确认后再关闭',
+      '其他': '与研发确认拒绝原因，并沉淀到提单规范',
+    };
+
+    function buildBugRows(pkey) {
+      const { pname, cats, tpl } = lastWeekly;
+      const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
+      const byKey = new Map();
+      cats.filter((c) => !c.missingField).forEach((c) => c.issues.forEach((i) => {
+        const key = issueKey(i);
+        if (!byKey.has(key)) byKey.set(key, { key, issue: i, cats: [] });
+        byKey.get(key).cats.push(c.key);
+      }));
+      const lw = lastWeekly;
+      lw.rows = [...byKey.values()].map((r) => ({
+        key: r.key,
+        url: ctcIssueUrl(r.issue, pkey, projectCombo.value),
+        project: pname,
+        title: r.issue.summary || '',
+        tester: r.issue.reporterName || '',
+        cats: r.cats,
+        catText: r.cats.map((k) => CAT_LABEL[k]).join('、'),
+        issue: r.issue,
+      }));
+      lw.rows.forEach((r) => { r.rule = computeRule(r, tpl); });
+      renderBugTable();
+      buildAiPrompts(lw);
+      // 后台读取评论、匹配用例，读完用全部信息重新生成规则初稿
+      if (lw.rows.length) {
+        enrichRows(() => {}, lw).then(() => {
+          if (lastWeekly !== lw) return;   // 期间换了周 / 项目
+          lw.rows.forEach((r) => { r.rule = computeRule(r, tpl); });
+          renderBugTable();
+        }).catch(() => { if (lastWeekly === lw) renderBugTable(); });
+      }
+    }
+
+    // ---- 规则初稿：结合开发原因、备注、评论、CTC 字段、候选用例生成（不调 AI）
+    const shorten = (t, n = 80) => {
+      const x = String(t || '').replace(/\s+/g, ' ').trim();
+      return x.length > n ? x.slice(0, n) + '…' : x;
+    };
+    const coreTitle = (t) => shorten(String(t || '').replace(/【[^】]*】/g, '').trim(), 40);
+    const REJECT_HINT = /重复|非\s*bug|不是\s*(bug|问题)|设计如此|需求如此|符合(预期|设计)|正常现象|无法复现|不能复现|环境|已修复|拒绝|不处理/i;
+    const VERIFY_HINT = /验证|复测|回归|通过|已修复|关闭/;
+    const DEVICE_HINT = /折叠|fold|flip|ipad|pad|平板|分屏|横屏|竖屏|鸿蒙|harmony|小米|华为|三星|oppo|vivo|荣耀|低端机|老机型/i;
+
+    function computeRule(r, tpl) {
+      const i = r.issue;
+      const reason = issueReason(tpl, i);
+      const owner = fieldValues(tpl, i, '问题解决责任方').join('、');
+      const missedFlag = fieldValues(tpl, i, '测试是否漏测')[0] || '未填';
+      const iterFlag = fieldValues(tpl, i, '测试小迭代漏测')[0] || '未填';
+      const comments = r.comments || [];
+      const modules = (i.components || []).map((x) => x.cname).join('、');
+      const where = modules ? `「${modules}」模块` : '对应模块';
+      const lines = [];
+      const measures = [];
+      const basis = [];
+
+      if (r.cats.includes('rejected')) {
+        // 拒绝理由：开发原因优先，没写就从评论里找（取最近一条像拒绝理由的）
+        const hit = [...comments].reverse().find((c) => REJECT_HINT.test(c.text));
+        const text = [reason, hit && hit.text].filter(Boolean).join(' ');
+        const kind = classifyReject(text);
+        const dup = kind === '重复问题' ? (text.match(/[A-Za-z]+\d*-\d+/) || [])[0] : '';
+        lines.push(`拒绝原因：${kind}${dup ? `（重复 ${dup}）` : ''}`);
+        if (reason) { lines.push(`开发说明：${shorten(reason)}`); basis.push('开发原因'); }
+        if (hit) { lines.push(`评论（${hit.who} ${hit.at}）：${shorten(hit.text, 70)}`); basis.push(`评论：${hit.who}`); }
+        if (!reason && !hit) lines.push(r.comments === undefined ? '开发未填写原因，评论读取中…' : '开发和评论都没有写明拒绝理由，需找经办人确认');
+        measures.push(REJECT_MEASURE[kind]);
+      } else {
+        const firstSentence = (reason.split(/(?<=[。；;！!？?])/)[0] || reason).trim();
+        if (reason) { lines.push(`开发原因：${shorten(firstSentence, 90)}`); basis.push('开发原因'); }
+        else lines.push('开发原因：未填写，需找经办人确认');
+        lines.push(`漏测判定：测试是否漏测=${missedFlag}，小迭代漏测=${iterFlag}${owner ? `，责任方=${owner}` : ''}`);
+        basis.push('CTC 字段');
+        if (r.cases === undefined) lines.push('用例覆盖：读取中…');
+        else if (r.cases === null) lines.push('用例覆盖：用例库读取失败');
+        else if (r.cases.length) {
+          lines.push(`用例覆盖：候选用例 ${r.cases.length} 条，如「${shorten(r.cases[0].name, 30)}」，需确认是否覆盖该场景`);
+          basis.push('候选用例');
+        } else lines.push('用例覆盖：关键词未匹配到相关用例，需人工确认用例库');
+        const verify = [...comments].reverse().find((c) => VERIFY_HINT.test(c.text));
+        if (verify) { lines.push(`验证（${verify.who} ${verify.at}）：${shorten(verify.text, 60)}`); basis.push(`评论：${verify.who}`); }
+
+        const missedYes = missedFlag === '是' || iterFlag === '是';
+        const scene = coreTitle(r.title);
+        measures.push(r.cases && r.cases.length
+          ? `完善用例「${shorten(r.cases[0].name, 30)}」，补上场景：${scene}`
+          : `在${where}补充用例，覆盖场景：${scene}`);
+        const models = fieldValues(tpl, i, '机型').join(' ');
+        if (DEVICE_HINT.test(`${r.title} ${models}`)) measures.push('把涉及的机型 / 屏幕形态纳入该模块的机型矩阵，每轮迭代覆盖');
+        if (owner && !/上位机软件/.test(owner)) measures.push(`与${owner}对齐改动通知和联调范围，相关改动纳入回归`);
+        if (r.cats.includes('iterMissed') || iterFlag === '是') measures.push('小迭代提测时评估影响范围，回归扩大到关联功能');
+        if (r.cats.includes('feedback') && !missedYes) measures.push('确认是否为线上环境 / 数据特有问题，补充线上场景回归或监控');
+      }
+      const numbered = (list) => list.map((x, k) => `${k + 1}. ${x}`).join('\n');
+      return { analysis: numbered(lines), measure: numbered(measures), basis: basis.join('；') };
+    }
+
+    // ---- 补充数据：评论、用例库里的相关用例（查询后后台自动拉，规则初稿和 AI 都用）
+    const htmlText = (html) => new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html').body.textContent.replace(/\s+/g, ' ').trim();
+
+    // 评论接口：文档里没有，依次试几个路径，记住能用的那个
+    let commentPath = null;
+    async function issueComments(id) {
+      const paths = commentPath ? [commentPath] : ['/v1/issues/{id}/comment', '/v1/issues/{id}/comments', '/v1/issues/{id}/actions'];
+      for (const path of paths) {
+        try {
+          const d = await request(path.replace('{id}', id));
+          const list = Array.isArray(d) ? d : d && (d.actions || d.list || d.comments);
+          if (Array.isArray(list)) {
+            commentPath = path;
+            return list;
+          }
+        } catch (e) { /* 换下一个路径 */ }
+      }
+      return null;
+    }
+
+    // 项目用例库全量（只取名称和模块路径用来匹配），按项目缓存
+    const caseLibCache = {};
+    function projectCases(projectId) {
+      if (!caseLibCache[projectId]) {
+        caseLibCache[projectId] = (async () => {
+          const all = [];
+          for (let page = 1; page <= 30; page++) {
+            const d = await request('/api/v1/test/cases', { base: MFD, method: 'POST', body: { sysProjectId: projectId, page, size: 1000 } });
+            all.push(...(d.list || []));
+            if (!(d.list || []).length || all.length >= (d.total || 0)) break;
+          }
+          return all;
+        })().catch((e) => { delete caseLibCache[projectId]; throw e; });
+      }
+      return caseLibCache[projectId];
+    }
+
+    // 用例匹配：标题【】里的模块词 + CTC 模块名命中模块路径 / 用例名（每个 +3），再加标题与用例名的双字重合数
+    const PLATFORM_WORDS = /^(android|ios|ipad|iphone|app|pc|web|h5|安卓|苹果)$/i;
+    const bigrams = (text) => {
+      const t = String(text || '').replace(/【[^】]*】/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+      const g = new Set();
+      for (let k = 0; k < t.length - 1; k++) g.add(t.slice(k, k + 2));
+      return g;
+    };
+    function bugKeywords(r) {
+      const kw = new Set();
+      const add = (text) => String(text).split(/[-/&、,，\s]+/).map((x) => x.trim()).forEach((x) => { if (x.length >= 2 && !PLATFORM_WORDS.test(x)) kw.add(x); });
+      (r.title.match(/【([^】]+)】/g) || []).forEach((seg) => add(seg.slice(1, -1)));
+      (r.issue.components || []).forEach((c) => add(c.cname));
+      return [...kw];
+    }
+    function matchCases(r, cases) {
+      const kw = bugKeywords(r);
+      const tg = bigrams(r.title);
+      return cases.map((c) => {
+        const hay = `${c.nodePath || ''} ${c.name || ''}`;
+        if (!c._grams) c._grams = bigrams(c.name);
+        let overlap = 0;
+        tg.forEach((g) => { if (c._grams.has(g)) overlap++; });
+        const hits = kw.filter((k) => hay.includes(k)).length;
+        return { c, hits, overlap, score: hits * 3 + overlap };
+      }).filter((x) => (x.hits && x.overlap >= 2) || x.overlap >= 3)
+        .sort((a, b) => b.score - a.score).slice(0, 8).map((x) => x.c);
+    }
+
+    function enrichRows(onStatus, lw = lastWeekly) {
+      if (!lw.enrichPromise) lw.enrichPromise = doEnrich(onStatus, lw).catch((e) => { lw.enriching = false; lw.enrichPromise = null; throw e; });
+      return lw.enrichPromise;
+    }
+    async function doEnrich(onStatus, lw) {
+      lw.enriching = true;
+      const rows = lw.rows || [];
+      const projectId = projectCombo.value;
+      onStatus(`正在读取 ${rows.length} 个 Bug 的评论…`);
+      await pool(rows, 6, async (r) => {
+        const list = await issueComments(r.issue.id).catch(() => null);
+        r.comments = list && list
+          .filter((a) => !a.actionType || a.actionType === 'comment')
+          .map((a) => ({ who: a.authorName || '', at: String(a.createdAt || '').slice(0, 10), text: htmlText(a.actionBody || a.content || '').slice(0, 300) }))
+          .filter((c) => c.text);
+      });
+      onStatus('正在读取用例库并匹配相关用例…');
+      let cases = null;
+      try { cases = await projectCases(projectId); } catch (e) { /* 用例库拿不到就不带用例 */ }
+      rows.forEach((r) => { r.cases = cases ? matchCases(r, cases) : null; });
+      lw.enriching = false;
+      lw.enriched = {
+        comments: rows.some((r) => r.comments) ? rows.reduce((n, r) => n + (r.comments || []).length, 0) : null,
+        cases: cases ? rows.reduce((n, r) => n + r.cases.length, 0) : null,
+        caseTotal: cases ? cases.length : 0,
+      };
+      buildAiPrompts(lw);
+      return lw.enriched;
+    }
+
+    function buildAiPrompts(lw = lastWeekly) {
+      const { pname, tpl } = lw;
+      const rows = lw.rows || [];
+      const brief = (r) => {
+        const i = r.issue;
+        const dev = (fieldValues(tpl, i, '问题原因及解决方案')[0] || '').replace(/\s+/g, ' ').trim();
+        const note = (fieldValues(tpl, i, '备注')[0] || '').replace(/\s+/g, ' ').trim();
+        const desc = String(i.description || '').replace(/\s+/g, ' ').slice(0, 600);
+        return [
+          `### ${r.key}｜${r.catText}｜${r.title}`,
+          `- 状态：${i.issueStatusName || ''}；严重程度：${i.severityName || ''}；模块：${(i.components || []).map((x) => x.cname).join('、') || '—'}；缺陷类型：${fieldValues(tpl, i, '缺陷类型').join('、') || '—'}；发现阶段：${fieldValues(tpl, i, '发现阶段').join('、') || '—'}；机型：${fieldValues(tpl, i, '机型').join('、') || '—'}；测试跟进人员：${r.tester}；经办人：${i.assigneeName || ''}`,
+          `- CTC 字段：测试是否漏测=${fieldValues(tpl, i, '测试是否漏测').join('、') || '未填'}；测试小迭代漏测=${fieldValues(tpl, i, '测试小迭代漏测').join('、') || '未填'}；发散测试=${fieldValues(tpl, i, '发散测试').join('、') || '未填'}`,
+          `- 开发原因及解决方案：${dev || '未填写'}`,
+          `- 问题解决责任方：${fieldValues(tpl, i, '问题解决责任方').join('、') || '—'}${note ? `；备注：${note}` : ''}`,
+          desc ? `- 问题描述：${desc}` : '',
+          r.comments === undefined ? '' : r.comments === null ? '- 评论：读取失败' : r.comments.length
+            ? `- 评论（${r.comments.length} 条）：\n${r.comments.map((c) => `  - ${c.at} ${c.who}：${c.text}`).join('\n')}` : '- 评论：无',
+          r.cases === undefined ? '' : r.cases === null ? '- 相关用例：用例库读取失败' : r.cases.length
+            ? `- 候选用例（按关键词自动匹配，可能不相关，也可能漏掉真正相关的用例）：\n${r.cases.map((c) => `  - ${c.nodePath ? `[${c.nodePath}] ` : ''}${c.name}`).join('\n')}` : '- 候选用例：关键词没有匹配到（不代表用例库里没有相关用例）',
+        ].filter(Boolean).join('\n');
+      };
+      const data = rows.length ? rows.map(brief).join('\n\n') : '（本期没有这几类 Bug）';
+      const ask = [
+        `下面是「${pname}」${lw.w.title} 在 CTC 缺陷平台上的用户反馈、漏测、小迭代漏测、拒绝 Bug。每条带有 CTC 字段、开发填写的原因及解决方案、问题描述、评论（验证过程、研发说明等）和按关键词匹配的候选用例。请作为测试负责人逐条分析，判断必须有依据：`,
+        '1. 原因以开发填写的原因、评论、问题描述和 CTC 字段为准，不要臆测。信息之间矛盾或不足以判断时，直接写「信息不足：需要确认 xxx」，不要编一个原因。',
+        '2. 「测试是否漏测」「测试小迭代漏测」字段为「否」的，不能归为测试漏测；用户反馈 Bug 先判断是否属于测试阶段能发现的问题（对照责任方和开发原因：后端 / 固件 / 第三方 / 线上数据 / 需求变更等），再说明测试侧为什么没发现或为什么发现不了。',
+        '3. 候选用例是关键词自动匹配的，「没匹配到」不等于「没有用例」。只有候选里明确有覆盖这个场景的用例时，才能说「有用例但未覆盖 xxx / 未执行」；候选里明确没有覆盖该场景时，写「候选用例未覆盖 xxx 场景，需确认用例库」；不能凭空断言用例缺失。',
+        '4. 拒绝 Bug：以开发原因和评论里的拒绝理由为准，说清是重复、非问题 / 设计如此、无法复现、环境或操作问题等，以及提单环节可以怎么避免。',
+        '5. 原因分析和改进措施都分点写（1. 2.），各 1～3 点、每点 50 字以内；改进措施要具体到场景、用例名或流程动作，并且是测试团队能执行的。',
+        '6. 每条原因分析后写明判断依据的来源，如「开发原因」「评论：xx 的验证结论」「字段：测试是否漏测=是」「候选用例：xxx」。',
+      ];
+      // 「复制数据给 AI」：粘贴到对话里用，直接要求按表格列输出
+      lw.aiPrompt = [
+        ...ask,
+        '请输出 Markdown 表格，列为：涉及项目｜Bug 标题&链接｜测试跟进人员｜Bug 类别（拒绝/漏测/用户反馈）｜用户反馈/漏测原因分析（含依据）｜改进措施；表格后再写一段总结和优先级最高的 3 条改进措施。',
+        `涉及项目统一填「${pname}」；Bug 链接格式：${CTC_WEB}/#/issue/detail/<编号>?project=${projectCombo.value}`,
+        '',
+        data,
+      ].join('\n');
+    }
+
+    const enrichNote = (info) => [
+      info.comments === null ? '评论读取失败' : `评论 ${info.comments} 条`,
+      info.cases === null ? '用例库读取失败' : `相关用例 ${info.cases} 条（用例库共 ${info.caseTotal} 条）`,
+    ].join('，');
+
+    function renderBugTable() {
+      const rows = lastWeekly.rows || [];
+      const catColor = { 用户反馈: 'bg-amber-50 text-amber-700 border-amber-200', 漏测: 'bg-red-50 text-red-700 border-red-200', 小迭代漏测: 'bg-rose-50 text-rose-700 border-rose-200', 拒绝: 'bg-slate-100 text-slate-600 border-slate-200' };
+      const info = lastWeekly.enriched;
+      $('bugTableNote').textContent = !rows.length ? '' : [
+        `共 ${rows.length} 条`,
+        lastWeekly.enriching ? '正在读取评论和用例…' : info ? enrichNote(info) : '',
+      ].filter(Boolean).join('，');
+      $('bugAnalysisTable').innerHTML = rows.length ? rows.map((r) => {
+        const v = r.rule;
+        return `
+        <tr>
+          <td class="px-3 py-2 text-slate-600 break-words">${esc(r.project)}</td>
+          <td class="px-3 py-2 break-words"><a href="${esc(r.url)}" target="_blank" class="text-blue-600 hover:underline"><span class="font-mono">${esc(r.key)}</span><br />${esc(r.title)}</a></td>
+          <td class="px-3 py-2 text-slate-600 break-words">${esc(r.tester)}</td>
+          <td class="px-3 py-2">${r.cats.map((k) => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded-full border text-xs whitespace-nowrap ${catColor[CAT_LABEL[k]]}">${CAT_LABEL[k]}</span>`).join('')}</td>
+          <td class="px-3 py-2 text-slate-700 whitespace-pre-line break-words leading-relaxed">${esc(v.analysis)}${v.basis ? `<div class="mt-1 text-xs text-slate-400">依据：${esc(v.basis)}</div>` : ''}</td>
+          <td class="px-3 py-2 text-slate-700 whitespace-pre-line break-words leading-relaxed">${esc(v.measure)}</td>
+        </tr>`;
+      }).join('')
+        : '<tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">本期没有用户反馈、漏测、拒绝 Bug</td></tr>';
+    }
+
+    // 复制表格：HTML 版保留超链接（飞书文档 / 表格、Excel 粘贴即为表格），纯文本版为制表符分隔
+    async function copyBugTable(btn) {
+      const rows = (lastWeekly && lastWeekly.rows) || [];
+      const head = ['涉及项目', 'Bug标题&链接', '测试跟进人员', 'Bug类别', '用户反馈/漏测原因分析', '改进措施'];
+      const reasonText = (v) => v.analysis + (v.basis ? `\n依据：${v.basis}` : '');
+      const cellText = (t) => String(t).replace(/[\t\n]+/g, ' ');
+      const tsv = [head, ...rows.map((r) => {
+        const v = r.rule;
+        return [r.project, `${r.key} ${r.title} ${r.url}`, r.tester, r.catText, reasonText(v), v.measure];
+      })].map((line) => line.map(cellText).join('\t')).join('\n');
+      const td = (v) => `<td style="border:1px solid #ccc;padding:4px 8px;vertical-align:top">${v}</td>`;
+      const multi = (t) => esc(t).replace(/\n/g, '<br>');
+      const html = `<table style="border-collapse:collapse"><tr>${head.map((h) => `<th style="border:1px solid #ccc;padding:4px 8px;background:#f1f5f9">${esc(h)}</th>`).join('')}</tr>${
+        rows.map((r) => {
+          const v = r.rule;
+          return `<tr>${td(esc(r.project))}${td(`<a href="${esc(r.url)}">${esc(r.key)} ${esc(r.title)}</a>`)}${td(esc(r.tester))}${td(esc(r.catText))}${td(multi(reasonText(v)))}${td(multi(v.measure))}</tr>`;
+        }).join('')}</table>`;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([tsv], { type: 'text/plain' }),
+        })]);
+        const old = btn.textContent;
+        btn.textContent = '已复制 ✓';
+        setTimeout(() => (btn.textContent = old), 1200);
+      } catch (e) {
+        copy(tsv, btn);   // 浏览器不支持富文本剪贴板时退回纯文本
+      }
+    }
+
     function renderWeekly(pkey) {
-      const { pname, w, cats } = lastWeekly;
+      const { w, cats } = lastWeekly;
       const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
       const issueUrl = (i) => ctcIssueUrl(i, pkey, projectCombo.value);
       const sevColor = { 致命: 'text-red-700', 严重: 'text-red-600', 一般: 'text-amber-600' };
@@ -2262,7 +2644,8 @@
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">编号</th><th class="py-2 pr-3 font-normal">标题</th>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">状态</th><th class="py-2 pr-3 font-normal whitespace-nowrap">严重程度</th>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">优先级</th><th class="py-2 pr-3 font-normal whitespace-nowrap">报告人</th>
-                  <th class="py-2 font-normal whitespace-nowrap">经办人</th>
+                  <th class="py-2 pr-3 font-normal whitespace-nowrap">经办人</th>
+                  <th class="py-2 font-normal">原因</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">${c.issues.map((i) => `
@@ -2273,20 +2656,15 @@
                   <td class="py-2 pr-3 whitespace-nowrap ${sevColor[i.severityName] || 'text-slate-500'}">${esc(i.severityName || '')}</td>
                   <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.priorityName || '')}</td>
                   <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.reporterName || '')}</td>
-                  <td class="py-2 whitespace-nowrap text-slate-500">${esc(i.assigneeName || '未指派')}</td>
+                  <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.assigneeName || '未指派')}</td>
+                  <td class="py-2 text-xs text-slate-500 min-w-[10rem] max-w-[20rem]" title="${esc(issueReason(lastWeekly.tpl, i))}">${esc(issueReason(lastWeekly.tpl, i).slice(0, 60)) || '<span class="text-slate-300">未填写</span>'}</td>
                 </tr>`).join('')}
               </tbody>
             </table>
           </div>`}
         </section>`).join('');
 
-      $('weeklyText').textContent = [
-        `${pname} ${w.title}`,
-        ...cats.flatMap((c, n) => c.missingField ? [`${n + 1}.${c.name}：项目无此字段`] : [
-          `${n + 1}.${c.name}：${c.issues.length}`,
-          ...c.issues.map((i) => `   - ${issueKey(i)} ${i.summary}（${i.issueStatusName}，${i.severityName}） ${issueUrl(i)}`),
-        ]),
-      ].join('\n');
+      buildBugRows(pkey);
       $('weeklyResult').classList.remove('hidden');
     }
 
@@ -2429,6 +2807,11 @@
     $('queryBtn').addEventListener('click', runQuery);
     $('sumBtn').addEventListener('click', runSummary);
     $('progBtn').addEventListener('click', runProgress);
+    $('periodClear').addEventListener('click', () => {
+      sumPicker.clear();
+      refreshDaysPlaceholder();
+      saveSummaryForm();
+    });
     $('peopleBtn').addEventListener('click', runPeople);
     $('peopleCopyBtn').addEventListener('click', (e) => copy(peopleTsv(), e.target));
     $('peopleClearBtn').addEventListener('click', () => savePeopleList([]));
@@ -2500,7 +2883,22 @@
       if (b) applyRangePreset(b.dataset.preset);
     });
     $('weeklyBtn').addEventListener('click', runWeekly);
-    $('weeklyCopyBtn').addEventListener('click', (e) => copy($('weeklyText').textContent, e.target));
+    $('weeklyAiCopyBtn').addEventListener('click', async (e) => {
+      if (!lastWeekly) return;
+      const btn = e.target;
+      const old = btn.textContent;
+      btn.disabled = true;
+      try {
+        await enrichRows((msg) => { btn.textContent = msg.replace(/…$/, '') + '…'; });
+      } catch (err) {
+        showError('收集数据失败，复制的内容不含评论和用例：' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+      copy(lastWeekly.aiPrompt || '', btn);
+    });
+    $('bugTableCopyBtn').addEventListener('click', (e) => copyBugTable(e.target));
     // 卡片跳到对应列表；不改 hash，否则会触发 Tab 切换
     $('weeklyCards').addEventListener('click', (e) => {
       const a = e.target.closest('[data-weekly-jump]');
