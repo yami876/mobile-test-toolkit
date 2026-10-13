@@ -7,12 +7,26 @@
 
 ## 在线访问
 
-> 部署后把这里换成你的 Vercel/Cloudflare Pages 网址
+https://yami876.github.io/mobile-test-toolkit/
+
+## 仓库地址
+
+| 仓库 | 地址 | 说明 |
+|---|---|---|
+| GitHub | https://github.com/yami876/mobile-test-toolkit | 线上站点（GitHub Pages）从这里的 `main` 分支部署；推送工具的一键安装也从这里下载 |
+| GitLab（公司） | https://git.makeblock.com/yami.wu/mobile-test-toolkit | 公司内部备份 |
+
+改完代码两个仓库都要推：
+
+```powershell
+git push gitlab main
+git push origin main   # origin = GitHub，推完一两分钟线上更新
+```
 
 ## 本地预览
 
 ```powershell
-cd d:\项目测试\cursor_test\mobile-test-toolkit
+cd d:\repo\mobile-test-toolkit
 python -m http.server 8000
 # 浏览器打开 http://localhost:8000
 ```

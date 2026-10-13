@@ -30,6 +30,7 @@ const CLOSED = [6];
 const VALID = [6, 1, 3, 5, 10003];
 const PENDING = [1, 3, 10003];   // 待处理：新创建、处理中、挂起
 const RESOLVED = [5];
+const REGRESS_FAIL = [1, 3, 5, 10003];   // 回归失败：不含关闭（关闭说明后来又修好了）
 const SEVERE = [10107, 10106];
 const HIGH_PRIORITY = [1, 2];
 
@@ -227,7 +228,7 @@ async function peopleJob(today) {
   const bugCols = {
     bugNew: { versions: verFilter(version), statuses: VALID, created: period },
     regClosed: { versions: verFilter(regVersion), statuses: CLOSED, updated: period },
-    regFail: { versions: verFilter(regVersion), statuses: VALID, updated: period, regressFail: 1 },
+    regFail: { versions: verFilter(regVersion), statuses: REGRESS_FAIL, updated: period, regressFail: 1 },
   };
   const caseCount = async (field, timeField, userId) => (await request(MFD, '/api/v1/test/cases', {
     method: 'POST', body: { sysProjectId: projectId, page: 1, size: 1, [timeField]: [from, to], [field]: userId },
@@ -369,7 +370,7 @@ async function progressSection(vid, today, plansAll) {
   const pending = await block({ versions: verFilter(vid), statuses: PENDING });
   const regF = {
     closed: { versions: verFilter(reg), statuses: CLOSED, updated: period },
-    reopened: { versions: verFilter(reg), statuses: VALID, updated: period, regressFail: 1 },
+    reopened: { versions: verFilter(reg), statuses: REGRESS_FAIL, updated: period, regressFail: 1 },
     remain: { versions: verFilter(reg), statuses: RESOLVED, updated: ['2000-01-01', dayBefore] },
   };
   const regN = {};
