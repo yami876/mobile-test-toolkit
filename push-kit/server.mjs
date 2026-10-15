@@ -85,12 +85,23 @@ function taskList(config) {
 }
 const psq = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
+// 定时任务不弹命令行窗口：用 wscript + run-hidden.vbs 隐藏启动 node（能传回退出码，配置页「上次结果」才准）；
+// 电脑禁用了 VBScript 时退回 conhost --headless（同样不弹窗，但退出码传不回来）
+function taskAction(args) {
+  const vbs = path.join(DIR, 'run-hidden.vbs');
+  const sysDir = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  if (fs.existsSync(vbs) && fs.existsSync(path.join(sysDir, 'vbscript.dll'))) {
+    return { exe: path.join(sysDir, 'wscript.exe'), arg: `//B //Nologo "${vbs}" "${NODE}" ${args}` };
+  }
+  return { exe: path.join(sysDir, 'conhost.exe'), arg: `--headless "${NODE}" ${args}` };
+}
+
 async function applySchedule() {
   const tasks = taskList(readConfig());
   const lines = [
     `Get-ScheduledTask -TaskPath ${psq(TASK_PATH)} -ErrorAction SilentlyContinue | ${MINE} | Unregister-ScheduledTask -Confirm:$false`,
     ...tasks.map((t) => [
-      `$a = New-ScheduledTaskAction -Execute ${psq(NODE)} -Argument ${psq(t.args)} -WorkingDirectory ${psq(DIR)}`,
+      `$a = New-ScheduledTaskAction -Execute ${psq(taskAction(t.args).exe)} -Argument ${psq(taskAction(t.args).arg)} -WorkingDirectory ${psq(DIR)}`,
       `$t = New-ScheduledTaskTrigger -Daily -At ${psq(t.time)}`,
       // StartWhenAvailable：到点时电脑关机 / 睡眠，开机或唤醒后补推（脚本按 --at 判断原计划是哪天）
       `$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30)`,

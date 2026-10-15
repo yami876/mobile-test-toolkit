@@ -188,20 +188,53 @@ const mdEl = (content) => ({ tag: 'markdown', content });
 const grey = (t) => mdEl(`<font color='grey'>${t}</font>`);
 const button = (text, url) => ({ tag: 'button', text: { tag: 'plain_text', content: text }, type: 'default', behaviors: [{ type: 'open_url', default_url: url }] });
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+class RetryableError extends Error {}
+
+async function sendOnce(c) {
+  const body = { msg_type: 'interactive', card: c };
+  if (jobConf.secret) {   // 群机器人开启了「签名校验」时；签名带时间戳，每次重试都要重新算
+    const timestamp = Math.floor(Date.now() / 1000);
+    body.timestamp = String(timestamp);
+    body.sign = crypto.createHmac('sha256', `${timestamp}\n${jobConf.secret}`).update('').digest('base64');
+  }
+  let resp;
+  try {
+    resp = await fetch(jobConf.webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) {
+    throw new RetryableError(`网络错误：${e.message}`);
+  }
+  if (resp.status === 429 || resp.status >= 500) throw new RetryableError(`飞书 HTTP ${resp.status}`);
+  const res = await resp.json();
+  if (res.code === 0 || res.StatusCode === 0) return;
+  // 11232：频率限制（整点大量机器人同时发消息时常见），过一会儿再发即可
+  if (res.code === 11232 || /frequency limited/i.test(res.msg || '')) throw new RetryableError(`飞书限流：${JSON.stringify(res)}`);
+  throw new Error(`飞书推送失败：${JSON.stringify(res)}`);
+}
+
+// 限流 / 网络错误自动重试：15s、30s、60s、120s、240s（带随机抖动），前后约 8 分钟
+const RETRY_DELAYS = [15, 30, 60, 120, 240];
 async function send(c) {
   if (dryRun) {
     console.log(JSON.stringify(c, null, 2));
     return;
   }
   if (!jobConf.webhook) throw new Error(`config.json 里 ${job}.webhook 还没配置`);
-  const body = { msg_type: 'interactive', card: c };
-  if (jobConf.secret) {   // 群机器人开启了「签名校验」时
-    const timestamp = Math.floor(Date.now() / 1000);
-    body.timestamp = String(timestamp);
-    body.sign = crypto.createHmac('sha256', `${timestamp}\n${jobConf.secret}`).update('').digest('base64');
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await sendOnce(c);
+      if (attempt) log(`第 ${attempt + 1} 次发送成功`);
+      return;
+    } catch (e) {
+      if (!(e instanceof RetryableError) || attempt >= RETRY_DELAYS.length) {
+        throw new Error(attempt ? `${e.message}（已重试 ${attempt} 次）` : e.message);
+      }
+      const wait = RETRY_DELAYS[attempt] * 1000 * (0.8 + Math.random() * 0.4);
+      log(`${e.message}，${Math.round(wait / 1000)} 秒后重试（第 ${attempt + 1}/${RETRY_DELAYS.length} 次）`);
+      await sleep(wait);
+    }
   }
-  const res = await (await fetch(jobConf.webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
-  if (res.code !== 0 && res.StatusCode !== 0) throw new Error(`飞书推送失败：${JSON.stringify(res)}`);
 }
 
 // ========== 任务一：人员数据 ==========
@@ -452,6 +485,12 @@ try {
     process.exit(0);
   }
   if (!projectId) throw new Error('还没有选择项目，请打开「CTC 推送配置」页面选择项目');
+  // 定时任务按时运行时，随机晚 20～90 秒再查询发送，避开整点大量机器人同时发消息的限流高峰
+  if (arg('--at', '') && !catchUp && !force && !dryRun) {
+    const delay = 20000 + Math.random() * 70000;
+    log(`错开整点高峰，${Math.round(delay / 1000)} 秒后开始`);
+    await sleep(delay);
+  }
   token = getUtoken();
   const c = job === 'progress' ? await progressJob(today) : await peopleJob(today);
   await send(c);

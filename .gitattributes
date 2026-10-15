@@ -1,2 +1,3 @@
 push-kit/*.bat -text
 push-kit/*.ps1 -text
+push-kit/*.vbs -text

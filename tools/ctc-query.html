@@ -211,6 +211,7 @@
         <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700">📄 报告结论文字版（点击展开；右上角「复制报告结论」不用展开也能复制）</summary>
         <pre id="reportText" class="mt-2 bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
       </details>
+      <div id="failDetail" class="hidden pt-4 border-t border-slate-100"></div>
     </section>
 
     <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
@@ -731,21 +732,34 @@
 
     const cmpSign = (value, threshold) => (value > threshold ? '>' : value === threshold ? '=' : '<');
 
+    // 未关闭的有效问题 = 已解决（等回归）+ 待处理（新创建、处理中、挂起）
+    const CR_RESOLVED = [5];
+    const CR_PENDING = [1, 3, 10003];
     async function collect(projectId, versions) {
-      const [closed, valid, closedA, validA, closedS, validS] = await Promise.all([
+      const [closed, valid, closedA, validA, closedS, validS,
+        resolved, pending, resolvedA, pendingA, resolvedS, pendingS] = await Promise.all([
         count(projectId, versions, CLOSED),
         count(projectId, versions, VALID),
         count(projectId, versions, CLOSED, SEV_A),
         count(projectId, versions, VALID, SEV_A),
         count(projectId, versions, CLOSED, SEV_S),
         count(projectId, versions, VALID, SEV_S),
+        count(projectId, versions, CR_RESOLVED),
+        count(projectId, versions, CR_PENDING),
+        count(projectId, versions, CR_RESOLVED, SEV_A),
+        count(projectId, versions, CR_PENDING, SEV_A),
+        count(projectId, versions, CR_RESOLVED, SEV_S),
+        count(projectId, versions, CR_PENDING, SEV_S),
       ]);
-      const rate = pct(closed, valid);
-      const rateA = pct(closedA, validA);
+      // 没有问题（0/0）视为全部关闭：100%、达标
+      const rate = valid ? pct(closed, valid) : 100;
+      const rateA = validA ? pct(closedA, validA) : 100;
       return {
         closed, valid, rate,
         closed_a: closedA, valid_a: validA, rate_a: rateA,
         closed_s: closedS, valid_s: validS, left_s: validS - closedS,
+        versions,
+        open: { all: { resolved, pending }, a: { resolved: resolvedA, pending: pendingA }, s: { resolved: resolvedS, pending: pendingS } },
         pass_rate: rate >= RATE_THRESHOLD,
         pass_a: rateA >= A_THRESHOLD,
         pass_s: validS - closedS === 0,
@@ -757,7 +771,8 @@
         `${title}：`,
         `问题关闭率：${s.closed}/${s.valid}=${fmtPct(s.rate)} ${cmpSign(s.rate, RATE_THRESHOLD)} ${fmtPct(RATE_THRESHOLD)}`,
         s.left_s === 0 ? '无遗留S类问题' : `遗留S类问题：${s.left_s}个`,
-        `A类问题关闭率：${s.closed_a}/${s.valid_a}=${fmtPct(s.rate_a)} ${cmpSign(s.rate_a, A_THRESHOLD)} ${fmtPct(A_THRESHOLD)}`,
+        s.valid_a === 0 ? '无遗留A类问题'
+          : `A类问题关闭率：${s.closed_a}/${s.valid_a}=${fmtPct(s.rate_a)} ${cmpSign(s.rate_a, A_THRESHOLD)} ${fmtPct(A_THRESHOLD)}`,
       ];
     }
 
@@ -776,13 +791,74 @@
       return `<div class="flex justify-between py-1"><span class="text-slate-500">${label}</span><span class="font-mono ${color}">${value} ${ok ? '✓' : '✗'}</span></div>`;
     }
 
+    // 不达标指标的问题明细（单独显示在结果最下面，不写进报告结论）：没关闭的问题拆成已解决 / 待处理，数字可点开到 CTC
+    function failDetailHtml(blocks) {
+      const TIP = 'cursor-help underline decoration-dotted underline-offset-4';   // 有悬停说明的表头
+      const pkey = projectCombo.item && projectCombo.item.pkey;
+      // [指标, 是否达标字段, 未关闭拆分 key, 严重程度, 关闭数字段, 有效数字段, 达标线]
+      const metrics = [
+        ['问题关闭率', 'pass_rate', 'all', null, 'closed', 'valid', RATE_THRESHOLD],
+        ['A 类关闭率', 'pass_a', 'a', SEV_A, 'closed_a', 'valid_a', A_THRESHOLD],
+        ['遗留 S 类', 'pass_s', 's', SEV_S, 'closed_s', 'valid_s', 100],
+      ];
+      const link = (s, n, statuses, severity) => (n && pkey
+        ? `<a href="${esc(ctcListUrl(pkey, { versions: s.versions, statuses, severities: severity ? [severity] : undefined }))}" target="_blank" class="font-mono text-blue-600 hover:underline">${n}</a>`
+        : `<span class="font-mono">${n}</span>`);
+      const rows = [];
+      const gaps = [];   // 已解决的都回归关闭后仍不达标的指标：还差几个
+      blocks.forEach(([title, s]) => metrics.forEach(([label, passKey, key, severity, closedKey, validKey, line]) => {
+        if (s[passKey]) return;
+        const o = s.open[key];
+        // 已解决率 =（关闭 + 已解决）÷ 有效：已解决的都回归通过后，关闭率能到多少
+        const done = s[closedKey] + o.resolved;
+        const r = pct(done, s[validKey]);
+        // 回归后还差几个：S 类要求全部关闭，即待处理的 S 类个数；关闭率类 = 达标所需关闭数 - (关闭 + 已解决)
+        const gap = key === 's' ? o.pending : Math.max(0, Math.ceil((line * s[validKey]) / 100 - 1e-9) - done);
+        if (gap) gaps.push(`${title}${label}还需再关闭 ${gap} 个待处理问题`);
+        rows.push(`<tr class="text-center">
+          <td class="py-2 px-3 text-slate-700">${esc(title)}</td>
+          <td class="py-2 px-3 text-red-600">${label} <span class="font-mono">${key === 's'
+            ? `${s.left_s} 个（要求 0 个）`
+            : `${fmtPct(key === 'a' ? s.rate_a : s.rate)} &lt; ${fmtPct(line)}`}</span></td>
+          <td class="py-2 px-3">${link(s, o.resolved, CR_RESOLVED, severity)}</td>
+          <td class="py-2 px-3">${link(s, o.pending, CR_PENDING, severity)}</td>
+          <td class="py-2 px-3 font-mono ${r >= line ? 'text-green-600' : 'text-amber-600'}"
+            title="${r >= line ? '已解决的问题回归关闭后即可达标' : '已解决的问题全部回归关闭后仍不达标，还需要处理待处理问题'}">
+            (${s[closedKey]}+${o.resolved})/${s[validKey]} = ${fmtPct(r)}</td>
+          <td class="py-2 px-3 ${gap ? 'text-red-600' : 'text-green-600'}">${gap ? `✗ 还差 ${gap} 个` : '✓ 可达标'}</td></tr>`);
+      }));
+      if (!rows.length) return '';
+      // 预计通过结果：没进明细表的指标本来就达标，回归后仍达标，所以只看明细表里的差距
+      const forecast = gaps.length
+        ? `<div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <b class="cursor-help" title="假设已解决的问题全部回归通过并关闭，按同样的门槛判断">预计通过结果：❌ 仍不通过</b><br><span class="text-xs">${gaps.map(esc).join('；')}</span></div>`
+        : `<div class="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            <b class="cursor-help" title="假设已解决的问题全部回归通过并关闭，按同样的门槛判断">预计通过结果：✅ 可通过</b>　已解决的问题回归关闭后，各项指标都能达标</div>`;
+      return `
+        <div class="font-semibold text-slate-800 mb-2">❗ 未达标指标的问题明细</div>
+        ${forecast}
+        <div class="overflow-x-auto"><table class="w-full text-sm text-center whitespace-nowrap">
+          <thead class="text-slate-500 border-b border-slate-200"><tr>
+            <th class="py-2 px-3 font-normal">范围</th>
+            <th class="py-2 px-3 font-normal ${TIP}" title="当前值 &lt; 门槛；A 类只看严重，S 类只看致命">未达标指标</th>
+            <th class="py-2 px-3 font-normal ${TIP}" title="已解决（待回归）：已修复、等待回归验证的问题">已解决</th>
+            <th class="py-2 px-3 font-normal ${TIP}" title="待处理：新创建、处理中、挂起的问题">待处理</th>
+            <th class="py-2 px-3 font-normal ${TIP}" title="已解决率 =（关闭 + 已解决）÷ 有效问题，即已解决的问题都回归通过后的关闭率。绿色：回归完即可达标；橙色：回归完仍不达标">已解决率</th>
+            <th class="py-2 px-3 font-normal ${TIP}" title="已解决的问题全部回归关闭后能否达标；「还差 N 个」是除此之外还需要关闭的待处理问题数（遗留 S 类要求全部关闭）">回归后</th>
+          </tr></thead>
+          <tbody class="divide-y divide-slate-100">${rows.join('')}</tbody>
+        </table></div>
+        <p class="mt-2 text-xs text-slate-400">只统计有效问题中还没关闭的；点数字在 CTC 打开对应问题列表；鼠标悬停表头查看说明。</p>`;
+    }
+
     function card(title, s) {
       const ok = s.pass_rate && s.pass_a && s.pass_s;
       return `
         <div class="rounded-lg border ${ok ? 'border-green-200 bg-green-50/40' : 'border-red-200 bg-red-50/40'} p-4 text-sm">
           <div class="font-semibold text-slate-800 mb-2">${esc(title)}</div>
-          ${statRow('问题关闭率', `${s.closed}/${s.valid} = ${fmtPct(s.rate)}`, s.pass_rate)}
-          ${statRow('A 类关闭率', `${s.closed_a}/${s.valid_a} = ${fmtPct(s.rate_a)}`, s.pass_a)}
+          ${statRow('问题关闭率', `${s.closed}/${s.valid} = ${fmtPct(s.rate)}${s.valid ? '' : '（无问题）'}`, s.pass_rate)}
+          ${statRow('A 类关闭率', s.valid_a ? `${s.closed_a}/${s.valid_a} = ${fmtPct(s.rate_a)}`
+            : `${s.valid_a - s.closed_a} 个（${s.closed_a}/${s.valid_a} 已关）`, s.pass_a)}
           ${statRow('遗留 S 类', `${s.left_s} 个（${s.closed_s}/${s.valid_s} 已关）`, s.pass_s)}
         </div>`;
     }
@@ -810,6 +886,9 @@
         $('verdict').textContent = (ok ? '✅ ' : '❌ ') + (ok ? '测试通过' : '测试不通过');
         $('verdict').className = 'text-xl font-bold ' + (ok ? 'text-green-600' : 'text-red-600');
         $('statCards').innerHTML = card(`${vname} 版本（ID ${vid}）`, cur) + card(releasedLabel(), rel);
+        const detail = failDetailHtml([[verText(vid, vname), cur], [releasedLabel(), rel]]);
+        $('failDetail').innerHTML = detail;
+        $('failDetail').classList.toggle('hidden', !detail);
         $('reportText').textContent = lines.join('\n');
         $('resultSection').classList.remove('hidden');
         stampTime('queryTime');

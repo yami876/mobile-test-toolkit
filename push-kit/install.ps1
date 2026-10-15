@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # 关掉进度条，下载快很多
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $NodeVersion = 'v22.12.0'
-$KitFiles = @('ctc-daily.mjs', 'ctc-auth.mjs', 'server.mjs', 'config.html', 'config.template.json', 'version.txt')
+$KitFiles = @('ctc-daily.mjs', 'ctc-auth.mjs', 'server.mjs', 'config.html', 'config.template.json', 'version.txt', 'run-hidden.vbs')
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 function Ok($msg) { Write-Host "    $msg" -ForegroundColor Green }
@@ -137,14 +137,25 @@ if (-not $NoShortcut) {
 $tasks = @(Get-ScheduledTask -TaskPath '\CTCDaily\' -ErrorAction SilentlyContinue |
   Where-Object { $_.Actions[0].WorkingDirectory -eq $InstallDir })
 if ($tasks.Count) {
-  Step '更新已有定时任务（Node 路径、错过后开机补推）'
+  Step '更新已有定时任务（Node 路径、错过后开机补推、后台运行不弹窗口）'
+  # 后台运行：wscript + run-hidden.vbs 隐藏启动 node；禁用了 VBScript 的电脑退回 conhost --headless
+  $sysDir = Join-Path $env:SystemRoot 'System32'
+  $useVbs = Test-Path (Join-Path $sysDir 'vbscript.dll')
+  $vbs = Join-Path $InstallDir 'run-hidden.vbs'
   foreach ($t in $tasks) {
     $arg = $t.Actions[0].Arguments
+    # 不管旧任务是直接跑 node 还是已经包了一层，只取 node 自己的参数
+    $i = $arg.IndexOf('ctc-daily.mjs')
+    if ($i -ge 0) { $arg = $arg.Substring($i) }
     # 旧版任务没有 --at：补上计划时间，补推时脚本才知道原计划是哪天
     if ($arg -notmatch '--at ' -and $t.Triggers.Count) {
       $arg = "$arg --at $(([datetime]$t.Triggers[0].StartBoundary).ToString('HH:mm'))"
     }
-    $new = New-ScheduledTaskAction -Execute $node -Argument $arg -WorkingDirectory $InstallDir
+    if ($useVbs) {
+      $new = New-ScheduledTaskAction -Execute (Join-Path $sysDir 'wscript.exe') -Argument "//B //Nologo `"$vbs`" `"$node`" $arg" -WorkingDirectory $InstallDir
+    } else {
+      $new = New-ScheduledTaskAction -Execute (Join-Path $sysDir 'conhost.exe') -Argument "--headless `"$node`" $arg" -WorkingDirectory $InstallDir
+    }
     $set = $t.Settings
     $set.StartWhenAvailable = $true
     Set-ScheduledTask -TaskPath '\CTCDaily\' -TaskName $t.TaskName -Action $new -Settings $set | Out-Null
