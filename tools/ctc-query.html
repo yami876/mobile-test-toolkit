@@ -44,6 +44,8 @@
     .mod-tree summary { list-style: none; }
     .mod-tree summary::-webkit-details-marker { display: none; }
     .mod-tree[open] > summary .caret, .mod-tree details[open] > summary .caret { transform: rotate(90deg); }
+    /* 遗留问题：可编辑字段为空时显示提示文字 */
+    .lo-edit:empty::before { content: attr(data-placeholder); color: #cbd5e1; }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -128,7 +130,7 @@
           </div>
         </div>
       </div>
-      <!-- 版本进度、测试小结共用；版本关闭率不需要，切过去时隐藏 -->
+      <!-- 版本进度、测试小结共用；测试报告不需要，切过去时隐藏 -->
       <div id="periodRow" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
         <label class="block">
           <span class="flex items-center justify-between">
@@ -165,7 +167,7 @@
     <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
       <button data-target="close-rate" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">📊</span>
-        <span class="text-sm font-medium text-slate-700">版本关闭率</span>
+        <span class="text-sm font-medium text-slate-700">测试报告</span>
       </button>
       <button data-target="progress" class="query-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">🚦</span>
@@ -188,12 +190,13 @@
     <!-- 错误 -->
     <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 text-sm whitespace-pre-wrap"></div>
 
-    <!-- ============== 版本关闭率 ============== -->
+    <!-- ============== 测试报告（版本关闭率 + 遗留问题） ============== -->
     <section id="close-rate" class="query-section space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-slate-500 flex-1 min-w-0">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题。选择版本后自动查询。</p>
+      <p class="text-sm text-slate-500 flex-1 min-w-0">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题，选择版本后自动查询；「生成遗留问题」按测试报告格式列出该版本的遗留 bug。</p>
       <span class="flex items-center gap-3 shrink-0 ml-auto">
         <span id="queryTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+        <button id="leftoverBtn" class="px-4 py-2 border border-blue-600 text-blue-600 bg-white rounded-lg hover:bg-blue-50 disabled:opacity-50 min-w-[7.5rem] text-center">生成遗留问题</button>
         <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
       </span>
     </div>
@@ -211,7 +214,43 @@
         <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700">📄 报告结论文字版（点击展开；右上角「复制报告结论」不用展开也能复制）</summary>
         <pre id="reportText" class="mt-2 bg-slate-900 text-slate-100 rounded p-4 text-sm font-mono whitespace-pre-wrap"></pre>
       </details>
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs text-slate-500">📋 关闭率指标表格（测试报告格式，复制后可直接粘贴到飞书文档）</div>
+          <button id="copyRateTableBtn" class="px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded">复制关闭率表格</button>
+        </div>
+        <div id="closeRateTable" class="overflow-x-auto text-sm text-slate-700"></div>
+      </div>
       <div id="failDetail" class="hidden pt-4 border-t border-slate-100"></div>
+    </section>
+
+    <section id="leftoverSection" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div id="leftoverTitle" class="font-semibold text-slate-800 text-lg"></div>
+          <div id="leftoverSummary" class="text-sm text-slate-500 mt-1"></div>
+          <div id="leftoverSaved" class="text-xs text-slate-400 mt-0.5" title="移除、隐藏和改过的内容按项目 + 版本自动保存在本机浏览器，重新生成时自动恢复"></div>
+        </div>
+        <div class="flex gap-2">
+          <button id="leftoverAiBtn" class="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 hover:bg-violet-200 rounded" title="把遗留问题整理成提示词，粘贴给 Claude 等 AI，逐条生成更准确的影响和规避/恢复">复制给 AI</button>
+          <button id="leftoverFillBtn" class="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 hover:bg-violet-200 rounded" title="把 AI 的回复粘贴进来，按问题编号自动回填影响和规避/恢复">回填 AI 结果</button>
+          <button id="leftoverCompareBtn" class="hidden px-3 py-1.5 text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 rounded"></button>
+          <button id="leftoverClearBtn" class="hidden px-3 py-1.5 text-sm bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded" title="移除、隐藏和改过的内容按项目 + 版本保存在本机浏览器，重新生成时自动恢复；点这里清除，恢复成自动草稿">清除本版本记录</button>
+          <button id="leftoverCopyMdBtn" class="px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded">复制 Markdown</button>
+          <button id="leftoverCopyBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded" title="带标题和链接，可直接粘贴到飞书文档">复制到飞书文档</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400">遗留 = 新创建、处理中、挂起。「影响」（问题现象；概率性问题附复现概率）和「规避/恢复」（按问题类型套用通用说法）都是自动草稿，可直接在页面上点击修改，复制时会带上修改后的内容；想要更准确的，点「复制给 AI」让 AI 逐条改写，再点「回填 AI 结果」把 AI 的回复整段粘贴进来。</p>
+      <div id="leftoverFillPanel" class="hidden rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+        <div class="text-sm text-slate-700">把 AI 的回复整段粘贴到下面，按问题编号（如 XCS-123）匹配，填入对应的「影响」「规避/恢复」；AI 没给的字段保持原样。</div>
+        <textarea id="leftoverFillText" rows="8" class="w-full rounded border border-slate-300 p-2 text-sm font-mono" placeholder="[XCS-123 标题](链接)&#10;影响：……&#10;规避/恢复：……"></textarea>
+        <div class="flex items-center gap-2">
+          <button id="leftoverFillApply" class="px-3 py-1.5 text-sm bg-violet-600 text-white hover:bg-violet-700 rounded">回填</button>
+          <button id="leftoverFillCancel" class="px-3 py-1.5 text-sm bg-slate-200 hover:bg-slate-300 rounded">取消</button>
+          <span id="leftoverFillMsg" class="text-sm"></span>
+        </div>
+      </div>
+      <div id="leftoverBody" class="space-y-6"></div>
     </section>
 
     <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
@@ -851,6 +890,27 @@
         <p class="mt-2 text-xs text-slate-400">只统计有效问题中还没关闭的；点数字在 CTC 打开对应问题列表；鼠标悬停表头查看说明。</p>`;
     }
 
+    // 测试报告里的「关闭率指标」表格：已发布版本在前、当前版本在后，每格一个版本一行
+    function closeRateTable(blocks) {
+      const ge = (v, t) => (v > t ? '>' : v === t ? '>=' : '<');
+      const cell = (fn) => blocks.map(([title, s]) => `${title}：${fn(s)}`);
+      const cols = [
+        ['总体关闭率', cell((s) => `${s.closed}/${s.valid}=${fmtPct(s.rate)} ${ge(s.rate, RATE_THRESHOLD)} ${fmtPct(RATE_THRESHOLD)}`)],
+        ['S级缺陷关闭率', blocks.every(([, s]) => s.pass_s) ? ['100%']
+          : cell((s) => (s.valid_s ? `${s.closed_s}/${s.valid_s}=${fmtPct(pct(s.closed_s, s.valid_s))}${s.left_s ? `，遗留 ${s.left_s} 个` : ''}` : '无S类问题'))],
+        ['A级缺陷关闭率', cell((s) => (s.valid_a
+          ? `${s.closed_a}/${s.valid_a}=${fmtPct(s.rate_a)} ${ge(s.rate_a, A_THRESHOLD)} ${fmtPct(A_THRESHOLD)}` : '无遗留A类问题'))],
+      ];
+      const TD = 'border:1px solid #d0d7de;padding:6px 10px;vertical-align:top;';
+      const html = `<table style="border-collapse:collapse;"><tbody>
+        <tr><td rowspan="2" style="${TD}background:#f5f6f7;">关闭率指标</td>${cols.map(([h]) => `<td style="${TD}font-weight:bold;">${esc(h)}</td>`).join('')}</tr>
+        <tr>${cols.map(([, lines]) => `<td style="${TD}">${lines.map(esc).join('<br>')}</td>`).join('')}</tr>
+      </tbody></table>`;
+      const text = ['关闭率指标', ...cols.map(([h, lines]) => `${h}：\n${lines.join('\n')}`)].join('\n\n');
+      return { html, text };
+    }
+    let lastCloseRateTable = null;
+
     function card(title, s) {
       const ok = s.pass_rate && s.pass_a && s.pass_s;
       return `
@@ -890,6 +950,8 @@
         $('failDetail').innerHTML = detail;
         $('failDetail').classList.toggle('hidden', !detail);
         $('reportText').textContent = lines.join('\n');
+        lastCloseRateTable = closeRateTable([[releasedLabel(), rel], [verText(vid, vname), cur]]);
+        $('closeRateTable').innerHTML = lastCloseRateTable.html;
         $('resultSection').classList.remove('hidden');
         stampTime('queryTime');
       } catch (e) {
@@ -897,6 +959,385 @@
       } finally {
         btn.disabled = false;
         btn.textContent = '查询';
+      }
+    }
+
+    // ---------- 测试报告：遗留问题（移植自 ctc_leftover.py，分组规则、关键词、影响草稿一致） ----------
+    const LEFTOVER_STATUS = [1, 3, 10003];   // 新创建 / 处理中 / 挂起
+    const LO_HIGH_SEVERITY = ['致命', '严重'];
+    // 风险信号：功能链路受阻 / 结果不可预期（只在标题里匹配，避免描述正文误伤）
+    const LO_RISK_WORDS = [
+      '无法', '失败', '超时', '断连', '断开', '卡死', '无响应', '闪退', '崩溃',
+      '丢失', '概率', '偶现', '不生效', '不正确', '错配', '未拦截', '拦截',
+      '断电', '续打', '配网', '连接', '加工', '校准', '下发', '数据',
+    ];
+    // 体验 / 外观类信号：归到「其余遗留问题」
+    const LO_COSMETIC_WORDS = [
+      '文案', '翻译', '语言', 'UI', '图标', '样式', '布局', '间距', '颜色',
+      '截断', '显示不全', '遮挡', '对齐', '置灰', '热区', '分隔线', '留白',
+      '建议', '体验', '优化', '闪烁', '模糊', '动效', '占位',
+    ];
+    const LO_COSMETIC_SEVERITY = ['轻微', '建议'];
+    const LO_GROUPS = [
+      { key: 'high', title: '遗留严重or高优问题', detailed: true },
+      { key: 'risk', title: '风险问题', detailed: true },
+      { key: 'func', title: '其他功能性遗留问题', detailed: true },
+      { key: 'rest', title: '其余遗留问题（UI细节/文案翻译/体验优化类，不阻断操作）', detailed: false },
+    ];
+    let leftoverData = null;   // { vname, projectId, buckets, total }
+
+    function leftoverGroupOf(it) {
+      const severity = it.severityName || '';
+      const priority = it.priorityName || '';
+      const summary = it.summary || '';
+      if (LO_HIGH_SEVERITY.includes(severity) || priority === '高') return 'high';
+      if (LO_COSMETIC_SEVERITY.includes(severity) || LO_COSMETIC_WORDS.some((w) => summary.includes(w))) return 'rest';
+      if (LO_RISK_WORDS.some((w) => summary.includes(w))) return 'risk';
+      return 'func';
+    }
+
+    // 描述里的「[问题现象]」「[复现概率]」等段落
+    function descPart(desc, tag, limit = 200) {
+      const re = new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[:：]?\\s*([\\s\\S]*?)(?=\\[[^\\]]+\\][:：]|$)');
+      const m = re.exec(desc || '');
+      return m ? m[1].replace(/\s+/g, ' ').trim().slice(0, limit) : '';
+    }
+    // 影响草稿：问题现象 +（概率性问题才写）复现概率，供人工改写；必现的不写概率
+    const isAlwaysRepro = (freq) => /必现|必然|100\s*[%％]|^\s*(\d+)\s*\/\s*\1\s*$/.test(freq);
+    function draftImpact(it) {
+      const desc = it.description || '';
+      const phenomenon = descPart(desc, '[问题现象]');
+      const freq = descPart(desc, '[复现概率]', 30);
+      const bits = [phenomenon, freq && !isAlwaysRepro(freq) ? '复现概率 ' + freq : ''].filter(Boolean);
+      return bits.length ? bits.join('、') : '（待补充）';
+    }
+    // 规避/恢复草稿：按标题 + 问题现象匹配问题类型，给出通用说法（顺序即优先级），需人工复核
+    const WORKAROUND_RULES = [
+      [/闪退|崩溃|crash/i, '重新打开 App 后可恢复使用；尽量避免重复触发问题的操作步骤'],
+      [/卡死|无响应|卡住|假死/, '强制关闭 App 后重新打开可恢复'],
+      [/闪现|闪屏|跳转.*(异常|闪)|显示异常|显示不全|错位|重叠|遮挡/, '不影响功能使用；重新进入页面可恢复显示'],
+      [/固件|升级|OTA/i, '重新执行固件升级；仍失败时重启设备后再试'],
+      [/断连|断开|配网|蓝牙|Wi-?Fi|连接/i, '重新连接设备（必要时重启设备或 App）后可恢复'],
+      [/加工|下发|打印|雕刻|切割|走边框|对焦|校准/, '重新下发 / 执行加工；仍失败时重启设备后再试'],
+      [/登录|账号|注册/, '退出账号后重新登录可恢复'],
+      [/丢失|保存|导入|导出|附件|文件|工程|云空间/, '重新打开 / 导入文件；重要工程建议提前备份'],
+      [/不生效|未生效|不正确|参数|设置|错配/, '手动重新设置相关参数后再操作'],
+      [/卡顿|延迟|慢/, '等待操作完成或减少同时处理的元素数量，可缓解；不影响最终结果'],
+    ];
+    function draftWorkaround(it) {
+      const desc = it.description || '';
+      const text = `${it.summary || ''} ${descPart(desc, '[问题现象]')}`;
+      const hit = WORKAROUND_RULES.find(([re]) => re.test(text));
+      const freq = descPart(desc, '[复现概率]', 30);
+      const occasional = freq && !isAlwaysRepro(freq) ? '偶现问题，重试操作通常可规避；' : '';
+      return hit ? occasional + hit[1] : (occasional ? occasional.replace(/；$/, '') : '（待补充）');
+    }
+
+    const loKey = (it) => `${it.pkey}-${it.issueNum}`;
+    const loUrl = (it) => `${CTC_WEB}/#/issue/detail/${loKey(it)}?project=${leftoverData.projectId}`;
+
+    async function runLeftover() {
+      showError('');
+      const projectId = projectCombo.value;
+      const ver = versionCombo.value;
+      if (!projectId) return showError('请先选择项目');
+      if (!ver) return showError('请先选择版本');
+      const btn = $('leftoverBtn');
+      btn.disabled = true;
+      btn.textContent = '生成中…';
+      try {
+        const { id: vid, vname } = isVersionGroup(ver) ? { id: ver, vname: versionCombo.item.label } : await resolveVersion(projectId, ver);
+        const issues = await listIssues(projectId, { versions: verFilter(vid), statuses: LEFTOVER_STATUS });
+        const buckets = { high: [], risk: [], func: [], rest: [] };
+        issues.forEach((it) => {
+          const draft = { impact: draftImpact(it), workaround: draftWorkaround(it) };
+          buckets[leftoverGroupOf(it)].push({ ...it, ...draft, draft });
+        });
+        Object.values(buckets).forEach((list) => list.sort((a, b) => b.issueNum - a.issueNum));
+        leftoverData = { vname, projectId, vid, buckets, total: issues.length };
+        loadLeftoverState();
+        renderLeftover();
+        $('leftoverSection').classList.remove('hidden');
+        stampTime('queryTime');
+        $('leftoverSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成遗留问题';
+      }
+    }
+
+    let loCompare = true;   // 回填 AI 结果后是否显示原草稿对比
+
+    // 按「项目 + 版本」把每条 bug 的移除 / 隐藏 / 改过的内容存在本机浏览器，重新生成时按编号恢复
+    // seen：上次生成时已有的 bug 编号，用来标出新增的
+    const loStoreKey = () => `ctc-leftover:${leftoverData.projectId}:${leftoverData.vid}`;
+    function loadLeftoverState() {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(loStoreKey()) || 'null'); } catch (e) { /* 无痕模式等读不到时当作没有记录 */ }
+      const all = Object.values(leftoverData.buckets).flat();
+      const seen = new Set((saved && saved.seen) || []);
+      all.forEach((it) => {
+        const rec = saved && saved.items && saved.items[loKey(it)];
+        it.isNew = !!saved && !seen.has(loKey(it));
+        if (!rec) return;
+        it.excluded = !!rec.excluded;
+        if (rec.hide) it.hide = rec.hide;
+        ['impact', 'workaround'].forEach((k) => {
+          if (rec[k] == null) return;
+          it[k] = rec[k];
+          it.orig = it.orig || { ...it.draft };   // 和自动草稿对比
+        });
+      });
+      leftoverData.restored = all.filter((it) => saved && saved.items && saved.items[loKey(it)]).length;
+    }
+    function saveLeftoverState() {
+      if (!leftoverData || !leftoverData.vid) return;
+      const all = Object.values(leftoverData.buckets).flat();
+      const items = {};
+      all.forEach((it) => {
+        const rec = {};
+        if (it.excluded) rec.excluded = true;
+        if (it.hide && Object.values(it.hide).some(Boolean)) rec.hide = it.hide;
+        ['impact', 'workaround'].forEach((k) => { if (it[k] !== it.draft[k]) rec[k] = it[k]; });
+        if (Object.keys(rec).length) items[loKey(it)] = rec;
+      });
+      try {
+        localStorage.setItem(loStoreKey(), JSON.stringify({ seen: all.map(loKey), items, savedAt: Date.now() }));
+        const n = Object.keys(items).length;
+        $('leftoverSaved').textContent = n
+          ? `💾 已自动保存到本机（${n} 条有修改）${new Date().toTimeString().slice(0, 8)}`
+          : '💾 修改会自动保存到本机，重新生成时恢复';
+      } catch (e) {
+        $('leftoverSaved').textContent = '⚠️ 浏览器不允许保存（如无痕模式），修改只在本次页面有效';
+      }
+    }
+    function clearLeftoverState() {
+      if (!confirm('清除本版本的记录？移除、隐藏和改过的内容都会恢复成自动草稿。')) return;
+      try { localStorage.removeItem(loStoreKey()); } catch (e) { /* ignore */ }
+      Object.values(leftoverData.buckets).flat().forEach((it) => {
+        Object.assign(it, it.draft, { excluded: false, hide: undefined, orig: undefined, isNew: false });
+      });
+      leftoverData.restored = 0;
+      renderLeftover();
+    }
+
+    function renderLeftover() {
+      const { vname, buckets, total } = leftoverData;
+      const n = (k) => buckets[k].length;
+      $('leftoverTitle').textContent = `📋 ${vname} 遗留问题`;
+      $('leftoverSummary').textContent = `遗留 ${total} 条：严重/高优 ${n('high')} · 风险 ${n('risk')} · 其他功能性 ${n('func')} · 其余 ${n('rest')}`;
+      const ACT = 'shrink-0 text-xs text-slate-400 hover:text-red-600';
+      // 隐藏的栏只留一行提示，复制时不带
+      const field = (g, i, k, label, placeholder) => ((buckets[g][i].hide || {})[k]
+        ? `
+        <div class="flex gap-2 text-xs text-slate-400">
+          <span class="flex-1">${label}：已隐藏，不复制</span>
+          <button data-lo-act="hide|${g}|${i}|${k}" class="shrink-0 text-violet-600 hover:underline">显示</button>
+        </div>`
+        : `
+        <div class="group flex gap-2 text-sm">
+          <span class="shrink-0 text-slate-500">${label}：</span>
+          <div contenteditable="true" data-lo="${g}|${i}|${k}" data-placeholder="${placeholder}"
+            class="lo-edit flex-1 min-w-0 rounded px-1 -mx-1 text-slate-700 hover:bg-amber-50 focus:bg-amber-50 focus:outline-none">${esc(buckets[g][i][k])}</div>
+          <button data-lo-act="hide|${g}|${i}|${k}" class="${ACT} opacity-0 group-hover:opacity-100" title="隐藏这一栏，复制时不带">隐藏</button>
+        </div>${diffLine(g, i, k)}`);
+      // 对比：回填后内容变了的字段，下面显示原草稿，可单条还原
+      const diffLine = (g, i, k) => {
+        const it = buckets[g][i];
+        if (!loCompare || !it.orig || it.orig[k] === it[k]) return '';
+        return `
+        <div class="flex gap-2 text-xs text-slate-400 pl-4">
+          <span class="shrink-0">原草稿：</span>
+          <span class="flex-1 min-w-0 line-through decoration-slate-300">${esc(it.orig[k] || '（空）')}</span>
+          <button data-restore="${g}|${i}|${k}" class="shrink-0 text-violet-600 hover:underline">还原</button>
+        </div>`;
+      };
+      const all = Object.values(buckets).flat();
+      const changed = all.filter((it) => it.orig && (it.orig.impact !== it.impact || it.orig.workaround !== it.workaround)).length;
+      $('leftoverCompareBtn').classList.toggle('hidden', !all.some((it) => it.orig));
+      $('leftoverCompareBtn').textContent = loCompare ? `隐藏对比（${changed} 条有改动）` : `对比原草稿（${changed} 条有改动）`;
+      // 移除的 bug 灰显折叠，复制时不带，可恢复
+      const removed = all.filter((it) => it.excluded).length;
+      if (removed) $('leftoverSummary').textContent += ` · 已移除 ${removed} 条（不复制）`;
+      const added = all.filter((it) => it.isNew).length;
+      if (added) $('leftoverSummary').textContent += ` · 新增 ${added} 条`;
+      if (leftoverData.restored) $('leftoverSummary').textContent += ` · 已按本机记录恢复 ${leftoverData.restored} 条的修改`;
+      $('leftoverClearBtn').classList.toggle('hidden', !leftoverData.restored && !all.some((it) => it.excluded || it.orig || (it.hide && Object.values(it.hide).some(Boolean))));
+      saveLeftoverState();
+      const kept = (k) => buckets[k].filter((it) => !it.excluded).length;
+      $('leftoverBody').innerHTML = LO_GROUPS.map((grp) => `
+        <div class="space-y-3">
+          <h3 class="font-semibold text-slate-800">${esc(grp.title)}：<span class="text-sm font-normal text-slate-400">${kept(grp.key)} 条${kept(grp.key) < n(grp.key) ? `（已移除 ${n(grp.key) - kept(grp.key)} 条）` : ''}</span></h3>
+          ${n(grp.key) ? buckets[grp.key].map((it, i) => `
+            <div class="${grp.detailed ? 'rounded-lg border p-3 space-y-1.5 ' + (it.excluded ? 'border-dashed border-slate-200 bg-slate-50 opacity-60' : 'border-slate-200') : 'pl-1 ' + (it.excluded ? 'opacity-50' : '')}">
+              <div class="flex items-start gap-2 text-sm">
+                <div class="flex-1 min-w-0 ${it.excluded ? 'line-through' : ''}">
+                  ${it.isNew ? '<span class="mr-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-xs no-underline" title="上次生成后新出现的遗留 bug">新增</span>' : ''}<a href="${esc(loUrl(it))}" target="_blank" class="text-blue-600 hover:underline">${esc(loKey(it))} ${esc(it.summary)}</a>
+                  <span class="ml-2 text-xs text-slate-400">${esc([it.issueStatusName, it.severityName, it.priorityName && it.priorityName + '优先级', it.assigneeName && '经办人：' + it.assigneeName].filter(Boolean).join(' · '))}</span>
+                </div>
+                ${it.excluded
+                  ? `<button data-lo-act="exclude|${grp.key}|${i}" class="shrink-0 text-xs text-violet-600 hover:underline">恢复</button>`
+                  : `<button data-lo-act="exclude|${grp.key}|${i}" class="${ACT}" title="整条移除，复制时不带（可恢复）">移除</button>`}
+              </div>
+              ${grp.detailed && !it.excluded ? field(grp.key, i, 'impact', '影响', '（待补充）') + field(grp.key, i, 'workaround', '规避/恢复', '点击填写') : ''}
+            </div>`).join('') : '<p class="text-sm text-slate-400">无</p>'}
+        </div>`).join('');
+    }
+
+    // 页面上改过的「影响」「规避/恢复」同步回数据，复制时就带上
+    function syncLeftoverEdits() {
+      document.querySelectorAll('[data-lo]').forEach((el) => {
+        const [g, i, k] = el.dataset.lo.split('|');
+        leftoverData.buckets[g][Number(i)][k] = el.innerText.replace(/\s+/g, ' ').trim();
+      });
+    }
+
+    // 复制用：去掉页面上移除的 bug；分组全移除时整组不输出
+    function leftoverKept() {
+      const buckets = {};
+      Object.entries(leftoverData.buckets).forEach(([k, list]) => (buckets[k] = list.filter((it) => !it.excluded)));
+      return { buckets, total: Object.values(buckets).flat().length, groups: LO_GROUPS.filter((g) => buckets[g.key].length) };
+    }
+    const loShow = (it, k) => !(it.hide || {})[k];
+
+    // Markdown：与 ctc_leftover.py 输出格式一致
+    function leftoverMarkdown() {
+      syncLeftoverEdits();
+      const { vname } = leftoverData;
+      const { buckets, total, groups } = leftoverKept();
+      const n = (k) => buckets[k].length;
+      const lines = [
+        `# ${vname}`, '',
+        `> 遗留 ${total} 条：严重/高优 ${n('high')} · 风险 ${n('risk')} · 其他功能性 ${n('func')} · 其余 ${n('rest')}`,
+        '> 「影响」「规避/恢复」为自动草稿，需人工复核', '',
+      ];
+      groups.forEach((grp) => {
+        lines.push(`### **${grp.title}：**`, '');
+        buckets[grp.key].forEach((it) => {
+          lines.push(`[${loKey(it)} ${it.summary}](${loUrl(it)})`, '');
+          if (grp.detailed && loShow(it, 'impact')) lines.push(`影响：${it.impact || ''}`, '');
+          if (grp.detailed && loShow(it, 'workaround')) lines.push(`规避/恢复：${it.workaround || ''}`, '');
+        });
+      });
+      return lines.join('\n');
+    }
+
+    // 富文本：粘贴到飞书文档保留标题和链接
+    function leftoverHtml() {
+      syncLeftoverEdits();
+      const { vname } = leftoverData;
+      const { buckets, total, groups } = leftoverKept();
+      const n = (k) => buckets[k].length;
+      const parts = [`<h1>${esc(vname)}</h1>`,
+        `<p>遗留 ${total} 条：严重/高优 ${n('high')} · 风险 ${n('risk')} · 其他功能性 ${n('func')} · 其余 ${n('rest')}</p>`];
+      groups.forEach((grp) => {
+        parts.push(`<h3>${esc(grp.title)}：</h3>`);
+        buckets[grp.key].forEach((it) => {
+          parts.push(`<p><a href="${esc(loUrl(it))}">${esc(loKey(it))} ${esc(it.summary)}</a></p>`);
+          if (grp.detailed && loShow(it, 'impact')) parts.push(`<p>影响：${esc(it.impact || '')}</p>`);
+          if (grp.detailed && loShow(it, 'workaround')) parts.push(`<p>规避/恢复：${esc(it.workaround || '')}</p>`);
+        });
+      });
+      return parts.join('');
+    }
+
+    // 给 AI 的提示词：逐条给出问题信息和当前草稿，要求按测试报告格式输出
+    function leftoverAiPrompt() {
+      syncLeftoverEdits();
+      const { vname } = leftoverData;
+      const { buckets } = leftoverKept();
+      const info = (it) => {
+        const desc = it.description || '';
+        return [
+          `- ${loKey(it)} ${it.summary}`,
+          `  严重程度：${it.severityName || '-'}；优先级：${it.priorityName || '-'}；状态：${it.issueStatusName || '-'}`,
+          `  问题现象：${descPart(desc, '[问题现象]', 300) || '-'}`,
+          `  预期结果：${descPart(desc, '[预期结果]', 200) || '-'}`,
+          `  复现概率：${descPart(desc, '[复现概率]', 30) || '-'}；测试环境：${descPart(desc, '[测试环境]', 120) || '-'}`,
+          `  当前草稿 —— 影响：${it.impact || '-'}；规避/恢复：${it.workaround || '-'}`,
+          `  链接：${loUrl(it)}`,
+        ].join('\n');
+      };
+      const groups = LO_GROUPS.filter((g) => g.detailed && buckets[g.key].length);
+      return [
+        `你是资深测试工程师，正在为「${vname}」版本的测试报告整理遗留问题。下面是按分组列出的遗留 bug（含问题现象、预期结果、复现概率和当前草稿）。`,
+        '请逐条改写「影响」和「规避/恢复」：',
+        '1. 影响：一句话说明对用户 / 业务的影响范围和程度（哪些场景、多大比例的用户、是否阻断主流程）；必现问题不用写复现概率，概率性问题要说明概率。',
+        '2. 规避/恢复：给出用户可执行的规避方式或出问题后的恢复办法；确实没有就写「暂无规避方式」，不要编造不存在的功能入口。',
+        '3. 保持原分组和顺序，输出 Markdown，格式与下面完全一致（链接原样保留）：',
+        '### **分组名：**',
+        '[编号 标题](链接)',
+        '影响：……',
+        '规避/恢复：……',
+        '',
+        ...groups.flatMap((g) => [`## ${g.title}`, ...buckets[g.key].map(info), '']),
+      ].join('\n');
+    }
+
+    // 回填 AI 回复：遇到问题编号切换到该条，「影响：」「规避/恢复：」后面的内容（含续行）填进去
+    function fillLeftoverFromAi(text) {
+      syncLeftoverEdits();
+      const items = new Map();
+      Object.values(leftoverData.buckets).flat().forEach((it) => items.set(loKey(it), it));
+      const result = new Map();   // key -> { impact, workaround }
+      const unknown = new Set();
+      let cur = null;
+      let field = null;
+      for (const raw of text.split(/\r?\n/)) {
+        const line = raw.replace(/\*\*/g, '').replace(/^\s*(?:[-*>]|\d+[.、])\s*/, '').trim();
+        if (!line) continue;
+        if (/^#+\s/.test(line)) { field = null; continue; }
+        const m = /^(影响|规避\s*[/／]\s*恢复|规避|恢复)\s*[:：]\s*(.*)$/.exec(line);
+        if (m && cur) {
+          field = m[1] === '影响' ? 'impact' : 'workaround';
+          cur[field] = m[2].trim();
+          continue;
+        }
+        const keys = (line.match(/[A-Za-z][A-Za-z0-9_]*-\d+/g) || []);
+        const key = keys.find((k) => items.has(k));
+        if (key) {
+          cur = result.get(key) || {};
+          result.set(key, cur);
+          field = null;
+        } else if (keys.length && /^\[/.test(line)) {
+          unknown.add(keys[0]);
+          cur = null;
+          field = null;
+        } else if (cur && field) {
+          cur[field] = `${cur[field]} ${line}`.trim();   // 续行
+        }
+      }
+      let filled = 0;
+      result.forEach((v, key) => {
+        const it = items.get(key);
+        let hit = false;
+        // 回填前的内容存到 orig（多次回填只保留第一次之前的），用于对比和还原
+        it.orig = it.orig || { impact: it.impact, workaround: it.workaround };
+        ['impact', 'workaround'].forEach((k) => { if (v[k]) { it[k] = v[k]; hit = true; } });
+        if (hit) filled += 1;
+      });
+      if (filled) renderLeftover();
+      return { filled, unknown: [...unknown] };
+    }
+
+    async function copyLeftover(btn, rich) {
+      const md = leftoverMarkdown();
+      try {
+        if (rich && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/html': new Blob([leftoverHtml()], { type: 'text/html' }),
+            'text/plain': new Blob([md], { type: 'text/plain' }),
+          })]);
+        } else {
+          await navigator.clipboard.writeText(md);
+        }
+        const old = btn.textContent;
+        btn.textContent = '已复制 ✓';
+        setTimeout(() => (btn.textContent = old), 1200);
+      } catch (e) {
+        showError('复制失败，请手动选中复制：' + e.message);
       }
     }
 
@@ -2889,6 +3330,60 @@
       e.target.textContent = input.type === 'password' ? '显示' : '隐藏';
     });
     $('queryBtn').addEventListener('click', runQuery);
+    $('leftoverBtn').addEventListener('click', runLeftover);
+    $('leftoverCopyMdBtn').addEventListener('click', (e) => copyLeftover(e.target, false));
+    $('leftoverAiBtn').addEventListener('click', (e) => copy(leftoverAiPrompt(), e.target));
+    $('leftoverFillBtn').addEventListener('click', () => {
+      $('leftoverFillPanel').classList.toggle('hidden');
+      $('leftoverFillMsg').textContent = '';
+      $('leftoverFillText').focus();
+    });
+    $('leftoverClearBtn').addEventListener('click', clearLeftoverState);
+    // 手动改「影响」「规避/恢复」时随手保存（停顿半秒后存）
+    let loSaveTimer = null;
+    $('leftoverBody').addEventListener('input', () => {
+      clearTimeout(loSaveTimer);
+      loSaveTimer = setTimeout(() => {
+        syncLeftoverEdits();
+        saveLeftoverState();
+        $('leftoverClearBtn').classList.remove('hidden');
+      }, 500);
+    });
+    $('leftoverCompareBtn').addEventListener('click', () => {
+      syncLeftoverEdits();
+      loCompare = !loCompare;
+      renderLeftover();
+    });
+    $('leftoverBody').addEventListener('click', (e) => {
+      const act = e.target.closest('[data-lo-act]');
+      if (act) {
+        syncLeftoverEdits();
+        const [type, g, i, k] = act.dataset.loAct.split('|');
+        const it = leftoverData.buckets[g][Number(i)];
+        if (type === 'exclude') it.excluded = !it.excluded;
+        else it.hide = { ...it.hide, [k]: !(it.hide || {})[k] };
+        renderLeftover();
+        return;
+      }
+      const btn = e.target.closest('[data-restore]');
+      if (!btn) return;
+      syncLeftoverEdits();
+      const [g, i, k] = btn.dataset.restore.split('|');
+      const it = leftoverData.buckets[g][Number(i)];
+      it[k] = it.orig[k];
+      renderLeftover();
+    });
+    $('leftoverFillCancel').addEventListener('click', () => $('leftoverFillPanel').classList.add('hidden'));
+    $('leftoverFillApply').addEventListener('click', () => {
+      const { filled, unknown } = fillLeftoverFromAi($('leftoverFillText').value);
+      const msg = $('leftoverFillMsg');
+      msg.className = 'text-sm ' + (filled ? 'text-green-600' : 'text-red-600');
+      msg.textContent = filled
+        ? `已回填 ${filled} 条${unknown.length ? `；未匹配到的编号：${unknown.join('、')}` : ''}`
+        : '没有识别到可回填的内容：请确认粘贴的是 AI 按格式输出的回复（每条带问题编号，下面是「影响：」「规避/恢复：」）';
+      if (filled && !unknown.length) setTimeout(() => $('leftoverFillPanel').classList.add('hidden'), 1500);
+    });
+    $('leftoverCopyBtn').addEventListener('click', (e) => copyLeftover(e.target, true));
     $('sumBtn').addEventListener('click', runSummary);
     $('progBtn').addEventListener('click', runProgress);
     $('periodClear').addEventListener('click', () => {
@@ -2996,6 +3491,20 @@
     });
     loadProjects();
     $('copyTextBtn').addEventListener('click', (e) => copy($('reportText').textContent, e.target));
+    $('copyRateTableBtn').addEventListener('click', async (e) => {
+      if (!lastCloseRateTable) return;
+      const btn = e.target;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([lastCloseRateTable.html], { type: 'text/html' }),
+          'text/plain': new Blob([lastCloseRateTable.text], { type: 'text/plain' }),
+        })]);
+        btn.textContent = '已复制 ✓';
+        setTimeout(() => (btn.textContent = '复制关闭率表格'), 1200);
+      } catch (err) {
+        copy(lastCloseRateTable.text, btn);
+      }
+    });
     $('copyJsonBtn').addEventListener('click', (e) => copy(JSON.stringify(lastJson, null, 2), e.target));
   </script>
 
