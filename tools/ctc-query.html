@@ -46,6 +46,17 @@
     .mod-tree[open] > summary .caret, .mod-tree details[open] > summary .caret { transform: rotate(90deg); }
     /* 遗留问题：可编辑字段为空时显示提示文字 */
     .lo-edit:empty::before { content: attr(data-placeholder); color: #cbd5e1; }
+    /* CTC 报告里的富文本预览 */
+    .ctc-rich ol { list-style: decimal; padding-left: 1.25rem; }
+    .ctc-rich ul { list-style: disc; padding-left: 1.25rem; }
+    .ctc-rich a { color: #2563eb; word-break: break-all; }
+    .ctc-rich h1 { font-weight: 600; }
+    .ctc-rich h3 { font-weight: 600; margin-top: .25rem; }
+    /* 测试报告小 Tab：不在当前 Tab 的结果区隐藏（与有无数据的 hidden 分开控制） */
+    .cr-off { display: none !important; }
+    .cr-tab { border-color: transparent; color: #64748b; }
+    .cr-tab:hover { color: #1e293b; }
+    .cr-tab.cr-active { border-color: #2563eb; color: #2563eb; font-weight: 500; }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -92,7 +103,7 @@
       <details id="manualToken" class="mt-4">
         <summary class="text-xs text-slate-500 cursor-pointer hover:text-slate-700">手动填写 utoken</summary>
       <div class="flex gap-2 mt-2">
-        <input id="tokenInput" type="password" placeholder="Bearer eyJhbGciOi..."
+        <input id="tokenInput" type="text" autocomplete="off" spellcheck="false" style="-webkit-text-security:disc" placeholder="Bearer eyJhbGciOi..."
           class="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono text-sm" />
         <button id="toggleTokenBtn" class="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 rounded-lg">显示</button>
         <button id="saveTokenBtn" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
@@ -192,16 +203,27 @@
 
     <!-- ============== 测试报告（版本关闭率 + 遗留问题） ============== -->
     <section id="close-rate" class="query-section space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-slate-500 flex-1 min-w-0">统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题，选择版本后自动查询；「生成遗留问题」按测试报告格式列出该版本的遗留 bug。</p>
+    <!-- 测试报告里的小 Tab：版本关闭率 / 遗留问题 / CTC 报告，各自的结果区按 data-crpane 切换 -->
+    <div id="crTabs" class="flex gap-1 border-b border-slate-200">
+      <button data-crtab="rate" class="cr-tab px-4 py-2 text-sm -mb-px border-b-2">📊 版本关闭率</button>
+      <button data-crtab="leftover" class="cr-tab px-4 py-2 text-sm -mb-px border-b-2">📋 遗留问题</button>
+      <button data-crtab="report" class="cr-tab px-4 py-2 text-sm -mb-px border-b-2">📝 CTC 测试报告</button>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 !mt-4">
+      <p id="crDesc" class="text-sm text-slate-500 flex-1 min-w-0"></p>
       <span class="flex items-center gap-3 shrink-0 ml-auto">
         <span id="queryTime" class="text-xs text-slate-400 whitespace-nowrap inline-block w-[13.5rem] text-right"></span>
+        <button id="ctcReportBtn" class="px-4 py-2 border border-slate-300 text-slate-700 bg-white rounded-lg hover:bg-slate-50 disabled:opacity-50 min-w-[7.5rem] text-center" title="读取 CTC 上该版本的测试报告，自动算出人天、测试时间、最终包等，勾选后写入">读取 CTC 报告</button>
         <button id="leftoverBtn" class="px-4 py-2 border border-blue-600 text-blue-600 bg-white rounded-lg hover:bg-blue-50 disabled:opacity-50 min-w-[7.5rem] text-center">生成遗留问题</button>
         <button id="queryBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[7rem] text-center">查询</button>
       </span>
     </div>
 
-    <section id="resultSection" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+    <p data-crpane="rate" data-crempty="resultSection" class="cr-empty text-sm text-slate-400 bg-white rounded-lg border border-dashed border-slate-200 p-6 text-center">选择版本后自动查询，或点上方「查询」</p>
+    <p data-crpane="leftover" data-crempty="leftoverSection" class="cr-empty text-sm text-slate-400 bg-white rounded-lg border border-dashed border-slate-200 p-6 text-center">点上方「生成遗留问题」，按测试报告格式列出该版本的遗留 bug</p>
+    <p data-crpane="report" data-crempty="ctcReportSection" class="cr-empty text-sm text-slate-400 bg-white rounded-lg border border-dashed border-slate-200 p-6 text-center">点上方「读取 CTC 报告」，读取该版本在 CTC 上的测试报告并自动填写</p>
+
+    <section id="resultSection" data-crpane="rate" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
       <div class="flex items-center justify-between">
         <div id="verdict" class="text-xl font-bold"></div>
         <div class="flex gap-2">
@@ -224,7 +246,7 @@
       <div id="failDetail" class="hidden pt-4 border-t border-slate-100"></div>
     </section>
 
-    <section id="leftoverSection" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
+    <section id="leftoverSection" data-crpane="leftover" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div id="leftoverTitle" class="font-semibold text-slate-800 text-lg"></div>
@@ -253,7 +275,26 @@
       <div id="leftoverBody" class="space-y-6"></div>
     </section>
 
-    <details class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
+    <section id="ctcReportSection" data-crpane="report" class="hidden bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div id="ctcReportTitle" class="font-semibold text-slate-800 text-lg"></div>
+          <div id="ctcReportMeta" class="text-sm text-slate-500 mt-1"></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="text-sm text-slate-500">沿用上个版本：
+            <select id="ctcPrevSelect" class="ml-1 px-2 py-1 rounded border border-slate-300 text-sm"></select>
+          </label>
+          <button id="ctcUndoBtn" class="hidden px-3 py-1.5 text-sm bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded">撤销上次写入</button>
+          <button id="ctcWriteBtn" class="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded">写入勾选项</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400">勾选要写入的字段，「写入内容」可以先改再写，只改勾选的字段。默认勾选：自动算出来的字段，以及报告里还空着的字段；报告已经填写过的沿用类字段保留现有内容，需要时点「复制上版本」。写入前会重新读取报告，有人刚改过就不写；写入后可以「撤销上次写入」。测试结论、风险要先在本页「查询」「生成遗留问题」。</p>
+      <div id="ctcReportMsg" class="text-sm"></div>
+      <div id="ctcReportBody" class="overflow-x-auto"></div>
+    </section>
+
+    <details data-crpane="rate" class="bg-white rounded-lg border border-slate-200 p-6 text-sm text-slate-600">
       <summary class="font-semibold text-slate-800 cursor-pointer">📐 统计口径（与 CTC 列表页筛选一一对应）</summary>
       <p class="mt-3 text-xs text-slate-400">门槛：问题关闭率 ≥ 85%，A 类关闭率 ≥ 80%，无遗留 S 类；当前版本与已发布版本须同时满足才判定通过。</p>
       <table class="mt-3 w-full text-left">
@@ -953,6 +994,7 @@
         lastCloseRateTable = closeRateTable([[releasedLabel(), rel], [verText(vid, vname), cur]]);
         $('closeRateTable').innerHTML = lastCloseRateTable.html;
         $('resultSection').classList.remove('hidden');
+        refreshCrEmpty();
         stampTime('queryTime');
       } catch (e) {
         showError(e.message);
@@ -982,7 +1024,7 @@
       { key: 'high', title: '遗留严重or高优问题', detailed: true },
       { key: 'risk', title: '风险问题', detailed: true },
       { key: 'func', title: '其他功能性遗留问题', detailed: true },
-      { key: 'rest', title: '其余遗留问题（UI细节/文案翻译/体验优化类，不阻断操作）', detailed: false },
+      { key: 'rest', title: '其余遗留问题（UI细节/文案翻译/体验优化类，不阻断操作）', detailed: true },
     ];
     let leftoverData = null;   // { vname, projectId, buckets, total }
 
@@ -1025,6 +1067,8 @@
       [/卡顿|延迟|慢/, '等待操作完成或减少同时处理的元素数量，可缓解；不影响最终结果'],
     ];
     function draftWorkaround(it) {
+      // UI 细节 / 文案 / 体验类：不阻断操作，按关键词套加工、连接等说法反而不对
+      if (leftoverGroupOf(it) === 'rest') return '不影响功能使用，无需规避';
       const desc = it.description || '';
       const text = `${it.summary || ''} ${descPart(desc, '[问题现象]')}`;
       const hit = WORKAROUND_RULES.find(([re]) => re.test(text));
@@ -1058,6 +1102,7 @@
         loadLeftoverState();
         renderLeftover();
         $('leftoverSection').classList.remove('hidden');
+        refreshCrEmpty();
         stampTime('queryTime');
         $('leftoverSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (e) {
@@ -1230,8 +1275,8 @@
       const { vname } = leftoverData;
       const { buckets, total, groups } = leftoverKept();
       const n = (k) => buckets[k].length;
-      const parts = [`<h1>${esc(vname)}</h1>`,
-        `<p>遗留 ${total} 条：严重/高优 ${n('high')} · 风险 ${n('risk')} · 其他功能性 ${n('func')} · 其余 ${n('rest')}</p>`];
+      // 版本号和统计合成一行三级标题，和分组标题一样大（一级标题在 CTC 报告里太大）
+      const parts = [`<h3>${esc(vname)} 遗留 ${total} 条：严重/高优 ${n('high')} · 风险 ${n('risk')} · 其他功能性 ${n('func')} · 其余 ${n('rest')}</h3>`];
       groups.forEach((grp) => {
         parts.push(`<h3>${esc(grp.title)}：</h3>`);
         buckets[grp.key].forEach((it) => {
@@ -1339,6 +1384,401 @@
       } catch (e) {
         showError('复制失败，请手动选中复制：' + e.message);
       }
+    }
+
+    // ---------- 测试报告：读取 / 填写 CTC 测试报告 ----------
+    // 报告：/api/v1/reports（列表）、/api/v1/report/{id}（详情，PUT 整份写回）；提测记录：/api/v1/record?versionId=提测单 ID
+    // 建议值来源：人天 = 各轮小结「共 N 人天」累加；开始日期 = 第一轮小结的测试时间；最终包 = 最后一次提测的测试包；
+    // 测试设备、范围、网络等重复字段 = 上个版本的报告
+    let ctcReport = null;   // { report, prevList, prev, records, rows }
+    const RPT_BACKUP_KEY = (id) => `ctc-report.backup.${id}`;
+
+    const rptGet = (id) => request(`/api/v1/report/${id}`, { base: MFD });
+    // 版本号比较：V1.4.0 < V1.5.0；带后缀的支线版本不参与「上个版本」推断
+    const verNums = (name) => { const m = /^V?(\d+)\.(\d+)\.(\d+)$/i.exec((name || '').trim()); return m ? m.slice(1).map(Number) : null; };
+    const verCmp = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+
+    // 测试总结按「一、xxx」「二、xxx」分段，便于只替换其中几段
+    function summarySections(html) {
+      const re = /<p>(?:<[^>]+>)*\s*([一二三四五六七八九十]+)、([^<]*)(?:<\/[^>]+>)*<\/p>/g;
+      const heads = [];
+      let m;
+      while ((m = re.exec(html || ''))) heads.push({ start: m.index, end: re.lastIndex, title: m[2].trim(), head: m[0] });
+      return heads.map((h, i) => ({ title: h.title, head: h.head, body: (html || '').slice(h.end, i + 1 < heads.length ? heads[i + 1].start : undefined) }));
+    }
+    const sectionOf = (html, kw) => (summarySections(html).find((s) => s.title.includes(kw)) || {}).body || '';
+    function replaceSections(html, repl) {
+      const secs = summarySections(html);
+      if (!secs.length) {
+        // 没有分段的空报告：按固定顺序拼
+        const order = ['新功能', '测试内容', '软件测试最终包', '固件测试版本'];
+        const cn = '一二三四';
+        return order.map((t, i) => `<p>${cn[i]}、${t}</p>${repl[t] != null ? repl[t] : ''}`).join('');
+      }
+      const done = new Set();
+      const out = secs.map((s) => {
+        const key = Object.keys(repl).find((k) => s.title.includes(k));
+        if (!key) return s.head + s.body;
+        done.add(key);
+        return s.head + repl[key];
+      });
+      const cn = '一二三四五六七八九十';
+      Object.keys(repl).filter((k) => !done.has(k)).forEach((k) => out.push(`<p>${cn[out.length] || out.length + 1}、${k}</p>${repl[k]}`));
+      return out.join('');
+    }
+
+    // 提测包文本 → 「Android：链接」「iOS：链接」
+    function packageHtml(text) {
+      const urls = (text || '').match(/https?:\/\/\S+/g) || [];
+      // Android 在前、iOS 在后，和报告模板一致
+      const rank = (u) => (/\.apk(\?|$)/i.test(u) ? 0 : /\.ipa(\?|$)/i.test(u) ? 1 : 2);
+      return urls.sort((a, b) => rank(a) - rank(b)).map((u) => {
+        const label = /\.apk(\?|$)/i.test(u) ? 'Android' : /\.ipa(\?|$)/i.test(u) ? 'iOS' : '下载';
+        return `<p>${label}：<a href="${esc(u)}" rel="noopener noreferrer" target="_blank">${esc(u)}</a></p>`;
+      }).join('');
+    }
+
+    // 小结里的「测试时间：2026/10/14～10/15」「9/23～9/29」→ 开始日期（没写年份时按小结提交时间推年份）
+    function summaryStartDate(summary, createdAt) {
+      const m = /测试时间[:：]\s*(?:(\d{4})[/.\-年])?(\d{1,2})[/.\-月](\d{1,2})/.exec(summary || '');
+      if (!m) return '';
+      const ref = new Date(createdAt * 1000);
+      let y = m[1] ? Number(m[1]) : ref.getFullYear();
+      if (!m[1] && new Date(y, Number(m[2]) - 1, Number(m[3])) > ref) y -= 1;
+      return `${y}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    }
+
+    async function loadCtcReport() {
+      showError('');
+      const projectId = projectCombo.value;
+      const ver = versionCombo.value;
+      if (!projectId) return showError('请先选择项目');
+      if (!ver || isVersionGroup(ver)) return showError('请先选择具体版本');
+      const btn = $('ctcReportBtn');
+      btn.disabled = true;
+      btn.textContent = '读取中…';
+      try {
+        const { id: vid, vname } = await resolveVersion(projectId, ver);
+        // 缺陷版本 → 提测单（jiraVersionId 对应）→ 报告 ID；报告列表接口不返回测试中的报告，只能这样找
+        const testVersions = ((await request(`/api/v1/version/list?project=${projectId}&page=1&size=200`, { base: MFD })) || {}).list || [];
+        const tv = testVersions.find((v) => v.jiraVersionId === vid) || testVersions.find((v) => v.name === vname);
+        if (!tv) throw new Error(`CTC 上没有找到「${vname}」的提测单`);
+        const reportIdOf = async (testVid) => ((await request(`/api/v1/reportId?projectId=${projectId}&versionId=${testVid}`, { base: MFD }).catch(() => null)) || {}).reportId || 0;
+        const reportId = await reportIdOf(tv.id);
+        if (!reportId) throw new Error(`「${vname}」还没有测试报告，请先在 CTC 创建测试报告`);
+        const report = await rptGet(reportId);
+        // 上个版本：同项目正式版本号里比当前小的最大一个；推不出来就取最近创建的另一个提测单
+        const cur = verNums(vname);
+        const others = testVersions.filter((v) => v.id !== tv.id).map((v) => ({ id: v.id, versionName: v.name, createdAt: v.createdAt }));
+        const formal = others.filter((v) => verNums(v.versionName) && (!cur || verCmp(verNums(v.versionName), cur) < 0))
+          .sort((a, b) => verCmp(verNums(b.versionName), verNums(a.versionName)));
+        const pick = $('ctcPrevSelect').dataset.pick;   // 手动选的提测单；-1 = 不沿用
+        const prevVid = pick === '-1' ? null : Number(pick) || (formal[0] || [...others].sort((a, b) => b.createdAt - a.createdAt)[0] || {}).id;
+        const [prev, recData] = await Promise.all([
+          prevVid ? reportIdOf(prevVid).then((id) => (id ? rptGet(id) : null)).catch(() => null) : null,
+          request(`/api/v1/record?versionId=${tv.id}`, { base: MFD }).catch(() => ({ record: [] })),
+        ]);
+        const records = ((recData && recData.record) || []).sort((a, b) => a.versionTestCount - b.versionTestCount);
+        // 新功能：该版本名称带「新功能」的测试计划，取用例模块的第一层（一般就是功能名）
+        const plans = (((await request(`/api/v1/test/plans?sysProjectId=${projectId}&page=1&size=1000`, { base: MFD }).catch(() => null)) || {}).list || [])
+          .filter((pl) => pl.projectVersionId === vid && /新功能/.test(pl.name || ''));
+        const features = [];
+        for (const pl of plans) {
+          const roots = (await request(`/api/v1/test/node/plan/list/${pl.id}`, { base: MFD }).catch(() => [])) || [];
+          roots.forEach((r) => ((r.children && r.children.length) ? r.children : [r]).forEach((n) => { if (!features.includes(n.name)) features.push(n.name); }));
+        }
+        ctcReport = { report, prevList: others, prev, prevVid, records, vname, issueVersionId: vid, features, featurePlans: plans.map((pl) => pl.name) };
+        buildCtcReportRows();
+        renderCtcReport();
+        $('ctcReportSection').classList.remove('hidden');
+        refreshCrEmpty();
+        $('ctcReportSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '读取 CTC 报告';
+      }
+    }
+
+    // 测试计划列表链接：实际开始时间在 [开始日 00:00, 结束日 23:59:59] 内（与 CTC 报告里的格式一致）
+    function planLink(pkey, vname, start, end) {
+      const ts = (d, endOfDay) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || ''); return m ? Math.floor(new Date(+m[1], m[2] - 1, +m[3], endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0) / 1000) : ''; };
+      return `${CTC_WEB}/#/project/${pkey}/dev/test-plan?projectVersionName=${encodeURIComponent(vname)}&plannedStartTime&actualStartTime=${ts(start)}&actualStartTime=${ts(end, true)}`;
+    }
+
+    // 每个可写字段：当前值、建议值、来源、默认是否勾选
+    function buildCtcReportRows() {
+      const { report, prev, records, vname, issueVersionId } = ctcReport;
+      const b = report.basicInfo || {};
+      const pb = (prev && prev.basicInfo) || {};
+      const pkey = projectCombo.item && projectCombo.item.pkey;
+      const prevName = prev ? prev.versionName : '';
+      // 「/」是手填的「不涉及」，不算空
+      // 富文本只剩空行（<p><br></p>）也算空
+      const isEmpty = (v) => v == null || (Array.isArray(v) ? !v.length : !String(v).replace(/<[^>]+>|&nbsp;|\s/g, ''));
+      const rows = [];
+      const plain = (h) => String(h || '').replace(/<[^>]+>/g, '').replace(/&nbsp;|\s+/g, '');
+      const same = (kind, a, b2) => (kind === 'html' ? plain(a) === plain(b2) : JSON.stringify(a) === JSON.stringify(b2));
+      // mode：computed = 计算出来的，和报告不同就勾选；fill = 只在报告空着时勾选；
+      //       prev = 沿用上个版本：报告空着时写入内容 = 上个版本并勾选，已填写就保留现有内容（可点「复制上版本」）
+      // prevVal：上个版本报告里同一栏的内容，显示在「上个版本报告」列
+      const add = (key, label, kind, cur, sug, source, mode, prevVal) => {
+        if (mode === 'prev') {
+          sug = isEmpty(cur) ? prevVal : cur;
+          if (!isEmpty(cur)) source = '报告已填写，保留现有内容';
+        }
+        rows.push({
+          key, label, kind, cur, sug, source, prevVal,
+          // 富文本只比文字，样式不同但内容一样的不算改动
+          checked: !isEmpty(sug) && !same(kind, cur, sug) && (mode === 'computed' || isEmpty(cur)),
+        });
+      };
+      const ps = (kw) => (prev ? sectionOf(prev.summary, kw) : '');
+
+      // 测试人力：各轮小结的人天累加
+      const days = records.map((r) => {
+        const m = /共\s*(\d+(?:\.\d+)?)\s*人天/.exec((r.testRecordSummary || {}).summary || '');
+        return { round: r.versionTestCount, n: m ? Number(m[1]) : null };
+      });
+      const sum = days.reduce((s, d) => s + (d.n || 0), 0);
+      const missing = days.filter((d) => d.n == null).map((d) => `第${d.round}轮`);
+      add('workload', '测试人力（人天）', 'text', b.workload, sum ? String(Math.round(sum * 10) / 10) : '',
+        days.length ? `各轮小结累加：${days.filter((d) => d.n != null).map((d) => d.n).join(' + ')} = ${sum}${missing.length ? `（${missing.join('、')}还没有小结人天）` : ''}` : '没有提测记录', missing.length ? 'fill' : 'computed', pb.workload);
+
+      // 测试时间：第一轮小结的开始日期 ~ 今天
+      const first = records[0];
+      const start = first ? (summaryStartDate((first.testRecordSummary || {}).summary, (first.testRecordSummary || {}).createdAt || first.createdAt) || ymd(new Date(first.createdAt * 1000))) : '';
+      add('testStartTime', '测试开始日期', 'text', b.testStartTime, start,
+        first ? (first.testRecordSummary ? '第一轮提测小结的测试时间' : '第一次提测时间（第一轮还没有小结）') : '没有提测记录', 'computed', pb.testStartTime);
+      add('testEndTime', '测试结束日期', 'text', b.testEndTime, ymd(new Date()), '今天', 'computed', pb.testEndTime);
+      add('softwareVersion', '软件版本', 'text', b.softwareVersion, vname, '当前版本', 'computed', pb.softwareVersion);
+      // 测试用例与结果：测试计划列表，筛选当前版本 + 测试周期内实际开始的计划（跟着上面的开始/结束日期变）
+      if (pkey) add('link', '测试用例与结果', 'link', b.link, planLink(pkey, vname, start, ymd(new Date())), `${vname} 测试周期内的测试计划`, 'computed', pb.link);
+
+      // 沿用上个版本
+      [['tester', '测试人员', 'list'], ['device', '测试设备', 'list'], ['network', '网络环境', 'list'], ['testScope', '测试范围', 'list'],
+        ['hardwareVersion', '硬件版本', 'text'], ['firmwareVersion', '固件版本', 'text'], ['pluginVersion', '插件版本', 'text'], ['structureVersion', '结构版本', 'text']]
+        .forEach(([key, label, kind]) => add(key, label, kind, b[key], null, prev ? `沿用上个版本 ${prevName}` : '没有上个版本报告', 'prev', pb[key]));
+
+      // 问题链接：按当前版本生成
+      if (pkey) {
+        const list = `${CTC_WEB}/#/project/${pkey}/issue/list?versions=${issueVersionId}`;
+        add('newBugLink', '新增问题链接', 'link', b.newBugLink, list, '当前版本问题列表', 'computed', pb.newBugLink);
+        add('oldBugLink', '遗留问题链接', 'link', b.oldBugLink, `${list}&issueStatus=1&issueStatus=3&issueStatus=10003`, '新创建、处理中、挂起', 'computed', pb.oldBugLink);
+        add('hangupLink', '挂起问题链接', 'link', b.hangupLink, `${list}&issueStatus=10003`, '挂起', 'computed', pb.hangupLink);
+      }
+
+      // 测试总结：测试内容、固件沿用上个版本，最终包取最后一次提测
+      const last = records[records.length - 1];
+      // 测试内容：各轮小结「测试内容：A+B+C」按 + 拆开去重汇总（「bug回归」与「bug回归测试」算同一项，留写得全的）；
+      // 支持端沿用报告现有 / 上个版本；没有小结时整段沿用上个版本
+      const items = [];
+      records.forEach((r) => {
+        const m = /测试内容[:：]\s*([^\n]+)/.exec((r.testRecordSummary || {}).summary || '');
+        if (!m) return;
+        m[1].split(/[+＋]/).map((x) => x.trim()).filter(Boolean).forEach((x) => {
+          const norm = (t) => t.replace(/测试$/, '').replace(/\s+/g, '').toLowerCase();
+          const i = items.findIndex((y) => norm(y) === norm(x));
+          if (i < 0) items.push(x);
+          else if (x.length > items[i].length) items[i] = x;
+        });
+      });
+      const platform = (/支持端[:：]\s*([^<]+)/.exec(sectionOf(report.summary, '测试内容'))
+        || /支持端[:：]\s*([^<]+)/.exec(prev ? sectionOf(prev.summary, '测试内容') : '') || [])[1];
+      const rounds = records.filter((r) => /测试内容[:：]/.test((r.testRecordSummary || {}).summary || '')).length;
+      // 新功能：新功能测试计划的模块名 + 提测单里的需求文档链接，报告空着时才默认勾选
+      const docs = [...new Set(records.map((r) => (r.newFeatureRemark || '').trim()).filter(Boolean))];
+      const featureHtml = (ctcReport.features.length ? `<ol>${ctcReport.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ol>` : '')
+        + docs.map((d) => (/^https?:\/\//.test(d) ? `<p>需求文档：<a href="${esc(d)}" rel="noopener noreferrer" target="_blank">${esc(d)}</a></p>` : `<p>${esc(d)}</p>`)).join('');
+      add('sum:新功能', '测试总结 · 新功能', 'html', sectionOf(report.summary, '新功能'), featureHtml,
+        ctcReport.features.length ? `新功能测试计划（${ctcReport.featurePlans.join('、')}）的模块${docs.length ? ' + 提测单需求文档' : ''}`
+          : docs.length ? '提测单需求文档（没有找到名称带「新功能」的测试计划）' : '没有新功能测试计划和需求文档', 'fill', ps('新功能'));
+      add('sum:测试内容', '测试总结 · 测试内容', 'html', sectionOf(report.summary, '测试内容'),
+        items.length ? `<ol><li>支持端：${esc((platform || 'iOS、Android').trim())}</li><li>测试内容：${esc(items.join('+'))}</li></ol>`
+          : prev ? sectionOf(prev.summary, '测试内容') : '',
+        items.length ? `汇总 ${rounds} 轮提测小结的测试内容（支持端沿用${platform ? '已有内容' : '默认值'}）` : prev ? `上个版本 ${prevName}（还没有小结）` : '没有小结和上个版本报告', 'fill', ps('测试内容'));
+      add('sum:软件测试最终包', '测试总结 · 软件测试最终包', 'html', sectionOf(report.summary, '最终包'), last ? packageHtml(last.testPackageUrl) : '',
+        last ? `第${last.versionTestCount}轮提测（最后一次）的测试包` : '没有提测记录', 'computed', ps('最终包'));
+      add('sum:固件测试版本', '测试总结 · 固件测试版本', 'html', sectionOf(report.summary, '固件'), null,
+        prev ? `沿用上个版本 ${prevName}` : '没有上个版本报告', 'prev', ps('固件'));
+
+      // 测试结论、风险：来自本页的关闭率查询和遗留问题
+      const verdictReady = !$('resultSection').classList.contains('hidden') && lastJson && lastJson.version === vname;
+      add('verdict', '测试结论', 'html', report.verdict,
+        verdictReady ? $('reportText').textContent.split('\n').map((l) => `<p>${esc(l)}</p>`).join('') : '',
+        verdictReady ? '本页「查询」的报告结论' : '先点「查询」生成关闭率结论', 'computed');
+      const riskReady = leftoverData && leftoverData.vname === vname;
+      add('risk', '风险（遗留问题）', 'html', report.risk, riskReady ? leftoverHtml() : '',
+        riskReady ? '本页「生成遗留问题」的结果（不含已移除的 bug 和隐藏的栏）' : '先点「生成遗留问题」', 'computed');
+      ctcReport.rows = rows;
+    }
+
+    function renderCtcReport() {
+      const { report, prevList, rows } = ctcReport;
+      const locked = report.release || report.testStatus === 'publish_report';
+      const url = `${CTC_WEB}/#/project/${(projectCombo.item && projectCombo.item.pkey) || ''}/dev/test-management/test-report-detail/4/${report.id}`;
+      $('ctcReportTitle').innerHTML = `📝 CTC 测试报告：<a href="${esc(url)}" target="_blank" class="text-blue-600 hover:underline">${esc(report.versionName)}（ID ${report.id}）</a>`;
+      $('ctcReportMeta').textContent = `状态：${locked ? '已发布（不能写入）' : '未发布'} · 结果：${report.result === 'pass' ? '通过' : report.result === 'fail' ? '不通过' : report.result || '-'} · 最后修改：${new Date(report.updatedAt * 1000).toLocaleString()}`;
+      $('ctcPrevSelect').innerHTML = `<option value="">（不沿用）</option>` + prevList.map((r) =>
+        `<option value="${r.id}" ${ctcReport.prevVid === r.id ? 'selected' : ''}>${esc(r.versionName)}</option>`).join('');
+      const show = (row, v) => {
+        if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '<span class="text-slate-300">（空）</span>';
+        if (row.kind === 'list') return esc(v.join('、'));
+        if (row.kind === 'link') return `<a href="${esc(v)}" target="_blank" class="text-blue-600 hover:underline break-all">${esc(v)}</a>`;
+        if (row.kind === 'html') return `<div class="ctc-rich max-h-40 overflow-auto">${v}</div>`;
+        return esc(v);
+      };
+      const isBlank = (v) => v == null || v === '' || (Array.isArray(v) && !v.length);
+      const plainOf = (h) => String(h || '').replace(/<[^>]+>/g, '').replace(/&nbsp;|\s+/g, '');
+      const sameVal = (row, a, b) => (row.kind === 'html' ? plainOf(a) === plainOf(b) : JSON.stringify(a) === JSON.stringify(b));
+      const editable = (row, i) => (row.kind === 'text' || row.kind === 'list'
+        ? `<input data-rpt-edit="${i}" value="${esc(row.kind === 'list' ? (row.sug || []).join('、') : row.sug || '')}"
+            class="w-full px-2 py-1 rounded border border-slate-200 focus:border-blue-400 focus:outline-none" ${row.kind === 'list' ? 'title="多个用顿号或逗号分隔"' : ''} />`
+        // 富文本（测试内容、最终包、固件、结论、风险）：直接在预览上改，保留列表、链接等格式
+        : row.kind === 'html'
+          ? `<div contenteditable="true" data-rpt-html="${i}" data-placeholder="点击填写"
+              class="lo-edit ctc-rich max-h-60 overflow-auto rounded border border-slate-200 px-2 py-1 hover:bg-amber-50 focus:bg-amber-50 focus:border-blue-400 focus:outline-none">${row.sug || ''}</div>`
+          : show(row, row.sug));
+      $('ctcReportBody').innerHTML = `
+        <table class="w-full text-sm align-top">
+          <thead class="text-slate-500 border-b border-slate-200"><tr>
+            <th class="py-2 px-2 w-8"></th><th class="py-2 px-2 text-left font-normal w-40">字段</th>
+            <th class="py-2 px-2 text-left font-normal">上个版本报告${ctcReport.prev ? `（${esc(ctcReport.prev.versionName)}）` : ''}</th>
+            <th class="py-2 px-2 text-left font-normal">报告当前内容</th><th class="py-2 px-2 text-left font-normal">写入内容（可修改）</th>
+          </tr></thead>
+          <tbody class="divide-y divide-slate-100">${rows.map((row, i) => `
+            <tr class="${row.checked ? 'bg-blue-50/40' : ''}">
+              <td class="py-2 px-2"><input type="checkbox" data-rpt-check="${i}" ${row.checked ? 'checked' : ''} ${locked ? 'disabled' : ''} /></td>
+              <td class="py-2 px-2 text-slate-700">${esc(row.label)}<div class="text-xs text-slate-400 mt-0.5">${esc(row.source)}</div></td>
+              <td class="py-2 px-2 text-slate-400 max-w-xs">${row.prevVal === undefined ? '' : show(row, row.prevVal)}
+                ${isBlank(row.prevVal) || sameVal(row, row.prevVal, row.sug) || locked ? ''
+                  : `<button data-rpt-copy="${i}" class="mt-1 block text-xs text-blue-600 hover:underline">复制上版本 →</button>`}</td>
+              <td class="py-2 px-2 text-slate-500 max-w-xs">${show(row, row.cur)}</td>
+              <td class="py-2 px-2 text-slate-700 max-w-md" data-rpt-cell="${row.key}">${editable(row, i)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+      $('ctcWriteBtn').disabled = locked;
+      updateCtcWriteBtn();
+      let backup = null;
+      try { backup = JSON.parse(store.get(RPT_BACKUP_KEY(report.id)) || 'null'); } catch (e) { /* ignore */ }
+      $('ctcUndoBtn').classList.toggle('hidden', !backup || locked);
+      if (backup) $('ctcUndoBtn').title = `恢复到 ${new Date(backup.at).toLocaleString()} 写入前的报告内容`;
+    }
+
+    function updateCtcWriteBtn() {
+      const n = ctcReport.rows.filter((r) => r.checked).length;
+      $('ctcWriteBtn').textContent = n ? `写入勾选的 ${n} 项` : '写入勾选项';
+    }
+
+    // 页面上改过的建议值同步回 rows
+    function syncCtcEdits() {
+      document.querySelectorAll('[data-rpt-edit]').forEach((el) => {
+        const row = ctcReport.rows[Number(el.dataset.rptEdit)];
+        row.sug = row.kind === 'list' ? el.value.split(/[、,，\n]/).map((s) => s.trim()).filter(Boolean) : el.value.trim();
+      });
+      document.querySelectorAll('[data-rpt-html]').forEach((el) => {
+        ctcReport.rows[Number(el.dataset.rptHtml)].sug = el.innerText.trim() ? el.innerHTML : '';
+      });
+      // 改了开始 / 结束日期，测试计划链接跟着变
+      const get = (k) => ctcReport.rows.find((r) => r.key === k);
+      const link = get('link');
+      const pkey = projectCombo.item && projectCombo.item.pkey;
+      if (link && pkey) {
+        link.sug = planLink(pkey, ctcReport.vname, (get('testStartTime') || {}).sug, (get('testEndTime') || {}).sug);
+        const cell = document.querySelector('[data-rpt-cell="link"]');
+        if (cell) cell.innerHTML = `<a href="${esc(link.sug)}" target="_blank" class="text-blue-600 hover:underline break-all">${esc(link.sug)}</a>`;
+      }
+    }
+
+    // 把勾选的字段合进最新的报告数据
+    function applyCtcRows(data, rows) {
+      const out = JSON.parse(JSON.stringify(data));
+      out.basicInfo = out.basicInfo || {};
+      const sumRepl = {};
+      rows.forEach((row) => {
+        if (row.key.startsWith('sum:')) sumRepl[row.key.slice(4)] = row.sug;
+        else if (row.key === 'verdict' || row.key === 'risk') out[row.key] = row.sug;
+        else out.basicInfo[row.key] = row.sug;
+      });
+      if (Object.keys(sumRepl).length) out.summary = replaceSections(out.summary, sumRepl);
+      return out;
+    }
+
+    async function writeCtcReport() {
+      syncCtcEdits();
+      const rows = ctcReport.rows.filter((r) => r.checked);
+      if (!rows.length) return showError('请先勾选要写入的字段');
+      const id = ctcReport.report.id;
+      if (!confirm(`将写入 CTC 测试报告「${ctcReport.report.versionName}」（ID ${id}）的以下字段，会覆盖报告里的现有内容：\n\n${rows.map((r) => '· ' + r.label).join('\n')}\n\n写入前会备份当前内容，可以点「撤销上次写入」恢复。确定写入？`)) return;
+      const btn = $('ctcWriteBtn');
+      btn.disabled = true;
+      btn.textContent = '写入中…';
+      showError('');
+      try {
+        // 写之前重新读一遍：别人刚改过就不写，避免互相覆盖
+        const fresh = await rptGet(id);
+        if (fresh.release || fresh.testStatus === 'publish_report') throw new Error('报告已发布，不能再写入');
+        if (fresh.updatedAt !== ctcReport.report.updatedAt) {
+          throw new Error(`报告在你读取之后被修改过（${new Date(fresh.updatedAt * 1000).toLocaleString()}），为避免覆盖别人的修改，请重新点「读取 CTC 报告」后再写入`);
+        }
+        store.set(RPT_BACKUP_KEY(id), JSON.stringify({ at: Date.now(), data: fresh }));
+        await request(`/api/v1/report/${id}`, { base: MFD, method: 'PUT', body: applyCtcRows(fresh, rows) });
+        ctcReport.report = await rptGet(id);
+        buildCtcReportRows();
+        renderCtcReport();
+        $('ctcReportMsg').className = 'text-sm text-green-600';
+        $('ctcReportMsg').textContent = `已写入 ${rows.length} 项，可到 CTC 查看并继续修改`;
+      } catch (e) {
+        showError('写入 CTC 报告失败：' + e.message);
+      } finally {
+        btn.disabled = false;
+        updateCtcWriteBtn();
+      }
+    }
+
+    async function undoCtcReport() {
+      const id = ctcReport.report.id;
+      let backup = null;
+      try { backup = JSON.parse(store.get(RPT_BACKUP_KEY(id)) || 'null'); } catch (e) { /* ignore */ }
+      if (!backup) return;
+      if (!confirm(`把报告恢复到 ${new Date(backup.at).toLocaleString()} 写入之前的内容？之后在 CTC 上做的修改也会被覆盖。`)) return;
+      try {
+        const fresh = await rptGet(id);
+        if (fresh.release || fresh.testStatus === 'publish_report') throw new Error('报告已发布，不能再写入');
+        await request(`/api/v1/report/${id}`, { base: MFD, method: 'PUT', body: { ...backup.data, updatedAt: fresh.updatedAt } });
+        store.set(RPT_BACKUP_KEY(id), '');
+        ctcReport.report = await rptGet(id);
+        buildCtcReportRows();
+        renderCtcReport();
+        $('ctcReportMsg').className = 'text-sm text-green-600';
+        $('ctcReportMsg').textContent = '已恢复到写入前的内容';
+      } catch (e) {
+        showError('恢复失败：' + e.message);
+      }
+    }
+
+    // ---------- 测试报告小 Tab ----------
+    const CR_TAB_KEY = 'ctc-query.crTab';
+    let crTab = store.get(CR_TAB_KEY) || 'rate';
+    function setCrTab(name) {
+      crTab = name;
+      store.set(CR_TAB_KEY, name);
+      document.querySelectorAll('[data-crtab]').forEach((b) => b.classList.toggle('cr-active', b.dataset.crtab === name));
+      document.querySelectorAll('#close-rate [data-crpane]').forEach((el) => el.classList.toggle('cr-off', el.dataset.crpane !== name));
+      const btns = { rate: 'queryBtn', leftover: 'leftoverBtn', report: 'ctcReportBtn' };
+      Object.entries(btns).forEach(([k, id]) => $(id).classList.toggle('cr-off', k !== name));
+      $('crDesc').textContent = {
+        rate: '统计当前版本与已发布版本的问题关闭率、A 类关闭率、遗留 S 类问题；选择版本后自动查询。',
+        leftover: '按测试报告格式列出该版本的遗留 bug（新创建、处理中、挂起），自动生成影响和规避/恢复草稿。',
+        report: '读取该版本在 CTC 上的测试报告，自动算出人天、测试时间、最终包等，勾选后写入。',
+      }[name];
+      refreshCrEmpty();
+    }
+    // 没数据时显示提示，有数据时隐藏提示
+    function refreshCrEmpty() {
+      document.querySelectorAll('[data-crempty]').forEach((el) => el.classList.toggle('hidden', !$(el.dataset.crempty).classList.contains('hidden')));
     }
 
     // ---------- 可输入筛选的下拉框 ----------
@@ -3326,11 +3766,50 @@
     $('loginBtn').addEventListener('click', startLogin);
     $('toggleTokenBtn').addEventListener('click', (e) => {
       const input = $('tokenInput');
-      input.type = input.type === 'password' ? 'text' : 'password';
-      e.target.textContent = input.type === 'password' ? '显示' : '隐藏';
+      // 用圆点遮挡代替 password 类型，避免浏览器弹「保存密码」
+      const masked = input.style.webkitTextSecurity === 'disc';
+      input.style.webkitTextSecurity = masked ? 'none' : 'disc';
+      e.target.textContent = masked ? '隐藏' : '显示';
     });
-    $('queryBtn').addEventListener('click', runQuery);
-    $('leftoverBtn').addEventListener('click', runLeftover);
+    $('queryBtn').addEventListener('click', () => { setCrTab('rate'); runQuery(); });
+    $('leftoverBtn').addEventListener('click', () => { setCrTab('leftover'); runLeftover(); });
+    document.querySelectorAll('[data-crtab]').forEach((b) => b.addEventListener('click', () => setCrTab(b.dataset.crtab)));
+    setCrTab(crTab);
+    $('ctcReportBtn').addEventListener('click', () => {
+      setCrTab('report'); $('ctcPrevSelect').dataset.pick = ''; $('ctcReportMsg').textContent = ''; loadCtcReport(); });
+    $('ctcPrevSelect').addEventListener('change', (e) => { e.target.dataset.pick = e.target.value || '-1'; loadCtcReport(); });
+    $('ctcWriteBtn').addEventListener('click', writeCtcReport);
+    $('ctcUndoBtn').addEventListener('click', undoCtcReport);
+    $('ctcReportBody').addEventListener('input', (e) => {
+      const el = e.target.closest('[data-rpt-edit], [data-rpt-html]');
+      if (!el) return;
+      syncCtcEdits();
+      // 改了建议值就自动勾上，免得改完忘了勾
+      const i = el.dataset.rptEdit ?? el.dataset.rptHtml;
+      const box = document.querySelector(`[data-rpt-check="${i}"]`);
+      if (box && !box.checked && !box.disabled) {
+        box.checked = true;
+        ctcReport.rows[Number(i)].checked = true;
+        box.closest('tr').classList.add('bg-blue-50/40');
+        updateCtcWriteBtn();
+      }
+    });
+    $('ctcReportBody').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-rpt-copy]');
+      if (!btn) return;
+      syncCtcEdits();
+      const row = ctcReport.rows[Number(btn.dataset.rptCopy)];
+      row.sug = JSON.parse(JSON.stringify(row.prevVal));
+      row.checked = true;
+      renderCtcReport();
+    });
+    $('ctcReportBody').addEventListener('change', (e) => {
+      const i = e.target.dataset.rptCheck;
+      if (i == null) return;
+      ctcReport.rows[Number(i)].checked = e.target.checked;
+      e.target.closest('tr').classList.toggle('bg-blue-50/40', e.target.checked);
+      updateCtcWriteBtn();
+    });
     $('leftoverCopyMdBtn').addEventListener('click', (e) => copyLeftover(e.target, false));
     $('leftoverAiBtn').addEventListener('click', (e) => copy(leftoverAiPrompt(), e.target));
     $('leftoverFillBtn').addEventListener('click', () => {
