@@ -28,7 +28,7 @@
     <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-800">📱 移动端测试工具集</h1>
-        <p class="text-sm text-slate-500 mt-1">业务平台 · 测试方法 · 接口清单 · 测试工具</p>
+        <p class="text-sm text-slate-500 mt-1">业务平台 · 测试工具</p>
       </div>
       <a href="https://github.com" target="_blank" class="text-sm text-slate-500 hover:text-blue-600">GitHub →</a>
     </div>
@@ -417,11 +417,15 @@
 
     // Tab 切换（记住上次选中，从二级页面返回时恢复）
     const TAB_STORAGE_KEY = 'mtt-current-tab';
-    const VALID_TABS = ['portals', 'methods', 'apis', 'tools'];
+    const ALL_TABS = ['portals', 'methods', 'apis', 'tools'];
+    // 暂时没有数据的 Tab 先隐藏，有内容后从这里删掉即可恢复
+    const HIDDEN_TABS = ['methods', 'apis'];
+    const VALID_TABS = ALL_TABS.filter((t) => !HIDDEN_TABS.includes(t));
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('hidden', HIDDEN_TABS.includes(b.dataset.tab)));
     function switchTab(t, persist = true) {
       if (!VALID_TABS.includes(t)) t = 'portals';
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-      VALID_TABS.forEach(name => {
+      ALL_TABS.forEach(name => {
         document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.toggle('hidden', t !== name);
       });
       if (persist) {
@@ -445,7 +449,7 @@
 
     // ============================================================ Tab 1: 业务平台
     const PORTAL_STORAGE_KEY = 'mtt-portals-v1';
-    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v7';
+    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v8';
     const DEFAULT_PORTALS = {
       version: 1,
       portals: [
@@ -508,6 +512,12 @@
             { name: '美服测试', url: 'https://projects-test.designfind.com/aimake', note: '' }
           ]
         },
+        { id: 'apifox-mobile', icon: '🔌', name: '移动端 API 接口', desc: 'Apifox 移动端接口文档',
+          envs: [{ name: '默认', url: 'https://app.apifox.com/project/8769516', note: '' }] },
+        { id: 'quality-platform', icon: '📊', name: '测试中心质量管理平台', desc: '质量看板',
+          envs: [{ name: '默认', url: 'http://10.11.20.27:8090/#/quality/dashboard', note: '' }] },
+        { id: 'firefly-tickets', icon: '🎫', name: '萤火平台工单中心', desc: '售后工单',
+          envs: [{ name: '默认', url: 'http://default.makeblock.com/experience-platform/home#quality/after-sale/ticket-center', note: '' }] },
         { id: 'browser-inspect', icon: '🐞', name: '浏览器调试工具', desc: '远程调试 Android WebView / Chrome / Edge 移动端页面',
           envs: [
             { name: 'Chrome (谷歌)', url: 'chrome://inspect/#devices', note: '点击会自动复制 URL（chrome:// 网页无法直接打开）。\n粘贴到 Chrome 地址栏，手机用 USB 连电脑 + 开 USB 调试 + Chrome 已授权，即可看到设备和页面列表。' },

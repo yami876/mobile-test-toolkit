@@ -243,6 +243,33 @@
           ]
         },
         {
+          id: 'apifox-mobile',
+          icon: '🔌',
+          name: '移动端 API 接口',
+          desc: 'Apifox 移动端接口文档',
+          envs: [
+            { name: '默认', url: 'https://app.apifox.com/project/8769516', note: '' }
+          ]
+        },
+        {
+          id: 'quality-platform',
+          icon: '📊',
+          name: '测试中心质量管理平台',
+          desc: '质量看板',
+          envs: [
+            { name: '默认', url: 'http://10.11.20.27:8090/#/quality/dashboard', note: '' }
+          ]
+        },
+        {
+          id: 'firefly-tickets',
+          icon: '🎫',
+          name: '萤火平台工单中心',
+          desc: '售后工单',
+          envs: [
+            { name: '默认', url: 'http://default.makeblock.com/experience-platform/home#quality/after-sale/ticket-center', note: '' }
+          ]
+        },
+        {
           id: 'browser-inspect',
           icon: '🐞',
           name: '浏览器调试工具',
@@ -254,7 +281,7 @@
         }
       ]
     };
-    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v7';
+    const PORTAL_MIGRATION_KEY = 'mtt-portals-migrated-v8';
 
     function load() {
       try {
