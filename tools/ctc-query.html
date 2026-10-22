@@ -338,7 +338,13 @@
       </section>
 
       <section class="bg-white rounded-lg border border-slate-200 p-6 space-y-3">
-        <div class="font-semibold text-slate-800">📋 测试计划情况</div>
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-semibold text-slate-800">📋 测试计划情况</div>
+          <span class="flex items-center gap-3">
+            <span id="planTime" class="text-xs text-slate-400"></span>
+            <button id="planRefreshBtn" class="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 rounded" title="只重新获取测试计划的执行情况，Bug 情况不重查">🔄 刷新计划</button>
+          </span>
+        </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left whitespace-nowrap">
             <thead class="text-slate-500 border-b border-slate-200">
@@ -346,14 +352,15 @@
                 <th class="py-2 pr-3 font-normal">计划</th><th class="py-2 pr-3 font-normal">版本</th><th class="py-2 pr-3 font-normal">阶段</th>
                 <th class="py-2 pr-3 font-normal">状态</th><th class="py-2 pr-3 font-normal">时间</th>
                 <th class="py-2 pr-3 font-normal text-right">用例</th><th class="py-2 pr-3 font-normal text-right">通过</th>
-                <th class="py-2 pr-3 font-normal text-right">失败</th><th class="py-2 pr-3 font-normal text-right">阻塞</th>
-                <th class="py-2 pr-3 font-normal text-right">未执行</th><th class="py-2 pr-3 font-normal text-right">执行率</th>
+                <th class="py-2 pr-3 font-normal text-right">失败</th><th class="py-2 pr-3 font-normal text-right">BLOCK</th>
+                <th class="py-2 pr-3 font-normal text-right">未开始</th><th class="py-2 pr-3 font-normal text-right">执行率</th>
                 <th class="py-2 font-normal text-right">通过率</th>
               </tr>
             </thead>
             <tbody id="planTable" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
+        <div id="planPeople" class="hidden pt-3 border-t border-slate-100"></div>
       </section>
 
       <details class="bg-white rounded-lg border border-slate-200 px-6 py-4">
@@ -376,6 +383,7 @@
           <tr><td class="py-1.5 text-slate-500">剩余回归数</td><td>影响版本：回归统计版本；更新时间在测试周期开始日之前；状态：已解决（即待回归），并按报告人汇总数量</td></tr>
           <tr><td class="py-1.5 text-slate-500">测试计划</td><td>属于所选版本，且计划时间与测试周期有重叠：开始取实际开始（没有则取计划开始），结束取实际结束（未结束取计划结束，都没有则只看开始日期）；执行率 = 已执行 ÷ 用例总数，通过率 = 通过 ÷ 已执行</td></tr>
           <tr><td class="py-1.5 text-slate-500">未执行用例模块</td><td>计划中状态为「未执行」的用例按 CTC 计划的模块树逐级汇总（可逐级展开）；执行人优先取用例上已分配的执行人，未分配时按最近的同级或上级模块里已执行用例的执行人推断（标注「推断」），都没有则为「未分配」</td></tr>
+          <tr><td class="py-1.5 text-slate-500">用例执行按执行人</td><td>把各计划的未执行用例按执行人汇总（规则同上：已分配 &gt; 推断 &gt; 未分配）；推断出多人的模块按「甲、乙」合并计数，不拆分</td></tr>
         </tbody>
       </table>
     </details>
@@ -477,6 +485,20 @@
       <div class="flex flex-wrap items-center gap-2 text-xs">
         <span class="text-slate-400">快捷选项：</span>
         <span id="peoplePresets" class="flex flex-wrap gap-2"></span>
+        <button type="button" id="presetAddBtn" class="px-2 py-1 rounded-full border border-dashed border-slate-300 text-slate-500 hover:border-blue-400 hover:text-blue-600" title="把下方当前名单存为一个快捷选项">＋ 存为快捷选项</button>
+      </div>
+      <!-- 快捷选项编辑：人员就是下方的当前名单，先在名单里增删再保存 -->
+      <div id="presetEditor" class="hidden rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2 text-sm">
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="presetEditorTitle" class="text-slate-700 font-medium"></span>
+          <input id="presetName" type="text" placeholder="快捷选项名称" class="flex-1 min-w-[12rem] px-2 py-1 rounded border border-slate-300 focus:border-blue-400 focus:outline-none" />
+        </div>
+        <div id="presetEditorHint" class="text-xs text-slate-500"></div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="presetSaveBtn" class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
+          <button type="button" id="presetCancelBtn" class="px-3 py-1 rounded bg-slate-200 hover:bg-slate-300">取消</button>
+          <button type="button" id="presetDeleteBtn" class="ml-auto px-3 py-1 rounded text-red-600 hover:bg-red-50">删除这个快捷选项</button>
+        </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3 items-start">
         <div class="relative">
@@ -2438,7 +2460,8 @@
       if (!details) return plans;
       await Promise.all(plans.map(async (p) => {
         p.stat = await request(`/api/v1/test/plan/${p.id}/statistics`, { base: MFD }).catch(() => null);
-        if (p.stat && p.stat.prepare > 0) {
+        // 全部执行完的计划也要取用例：执行人汇总里要算已执行的状态
+        if (p.stat && p.stat.total > 0) {
           p.modules = await loadPlanModules(p.id).catch(() => null);
         }
       }));
@@ -2467,6 +2490,38 @@
       return pendingModuleTree(cases, tree || []);
     }
 
+    // 各计划未执行用例按执行人汇总（跨计划）：key = 执行人（推断出多人时为「甲、乙」），
+    // inferred = 含推断；未分配单独计数。返回 { people: [{ name, total, inferred, plans: [{ name, url, n }] }], unassigned }
+    // 用例执行状态：[CTC 状态值, 显示名, 颜色]
+    const CASE_STATUS = [['Pass', '通过', 'text-green-600'], ['Fail', '失败', 'text-red-600'], ['Block', 'BLOCK', 'text-amber-600'], ['NA', 'NA', 'text-slate-500']];
+    // 同时汇总已执行用例：done = { Pass, Fail, Block, NA } 按执行人实际记录计数；plans 里的 n 是该计划的未执行条数
+    function pendingByPerson(planRows) {
+      const people = new Map();
+      let unassigned = 0;
+      const person = (key) => {
+        if (!people.has(key)) people.set(key, { name: key, total: 0, inferred: false, plans: [], done: {} });
+        return people.get(key);
+      };
+      planRows.forEach((r) => {
+        if (!r.modules || !r.modules.byExec) return;
+        r.modules.byExec.forEach((v, key) => {
+          if (key === '') { unassigned += v.n; return; }
+          const p = person(key);
+          p.total += v.n;
+          p.inferred = p.inferred || v.inferred;
+          const pl = p.plans.find((x) => x.name === r.name);
+          if (pl) pl.n += v.n;
+          else p.plans.push({ name: r.name, url: r.url, n: v.n });
+        });
+        (r.modules.executedBy || new Map()).forEach((st, name) => {
+          const p = person(name);
+          Object.entries(st).forEach(([k, n]) => (p.done[k] = (p.done[k] || 0) + n));
+        });
+      });
+      people.forEach((p) => (p.executed = Object.values(p.done).reduce((s, n) => s + n, 0)));
+      return { people: [...people.values()].sort((a, b) => b.total - a.total || b.executed - a.executed), unassigned };
+    }
+
     // 返回 { top, path }：top 是所有未执行用例的最近公共上级模块，path 是它的完整路径
     // 每个节点：total 子树内未执行条数；exec 子树内执行人汇总
     // 执行人：用例已分配的直接用；没分配的，用最近的（同级或上级）模块里已执行用例的执行人推断，
@@ -2482,6 +2537,8 @@
       const root = { name: '', parent: null, children: [], pending: 0, assigned: new Set(), executed: new Set() };
       root.children = tree.map((n) => make(n, root));
       let orphan = null;   // 模块树里找不到的用例
+      const pendingCases = [];
+      const executedBy = new Map();
       cases.forEach((c) => {
         let node = byId.get(c.nodeId);
         if (!node) {
@@ -2492,10 +2549,15 @@
           node = orphan;
         }
         if (c.status === 'Prepare') {
+          pendingCases.push({ c, node });
           node.pending++;
           if (c.executorName) node.assigned.add(c.executorName);
         } else if (c.executorName) {
           node.executed.add(c.executorName);
+          // 已执行用例按执行人、状态计数（Pass / Fail / Block / NA）
+          const e = executedBy.get(c.executorName) || {};
+          e[c.status] = (e[c.status] || 0) + 1;
+          executedBy.set(c.executorName, e);
         }
       });
 
@@ -2546,9 +2608,25 @@
       };
       execOf(top);
 
+      // 每条未执行用例归到一个执行人：用例上分配的 > 同模块里其他未执行用例分配的 > 推断（和模块树的执行人列一致）> 未分配（key ''）
+      const byExec = new Map();
+      pendingCases.forEach(({ c, node }) => {
+        let key = c.executorName || '';
+        let inferred = false;
+        if (!key && node.assigned.size) key = [...node.assigned].join('、');
+        if (!key) {
+          const names = inferFor(node);
+          if (names) { key = [...names].join('、'); inferred = true; }
+        }
+        const v = byExec.get(key) || { n: 0, inferred: false };
+        v.n++;
+        v.inferred = v.inferred || inferred;
+        byExec.set(key, v);
+      });
+
       const path = [];
       for (let a = top; a && a !== root; a = a.parent) path.unshift(a.name);
-      return { top, path };
+      return { top, path, byExec, executedBy };
     }
 
     function execLabel(info) {
@@ -2621,7 +2699,10 @@
     }
 
     // 版本 Bug 情况 + 测试计划情况：查询并渲染
-    async function loadProgress({ projectId, vid, vname, pkey, start, end, reg }) {
+    // reuseRows：只刷新测试计划时传入上次的 Bug 统计行，跳过 Bug 查询
+    let lastProgress = null;   // { args, rows }：上次查询的参数和 Bug 统计结果
+    async function loadProgress(args) {
+      const { projectId, vid, vname, pkey, start, end, reg, reuseRows } = args;
       const hasPeriod = !!(start && end);
       const period = hasPeriod ? [start, end] : undefined;   // undefined = 不加时间条件
       const span = hasPeriod ? `${md(start)}～${md(end)}` : '';
@@ -2633,7 +2714,7 @@
         { key: key + 'High', name: '其中高优问题', cond: '优先级 最高、高', f: { ...f, priorities: HIGH_PRIORITY }, sub: true },
         { key: key + 'Critical', name: '其中严重且高优问题', cond: '严重、致命 且 优先级 最高、高', f: { ...f, severities: SEVERE, priorities: HIGH_PRIORITY }, sub: true, critical: true },
       ];
-      const rows = [
+      const rows = reuseRows || [
         ...issueBlock('created', `${vname} ${when} 新增问题`, hasPeriod ? `${vname} · 创建 ${span} · 有效` : `${vname} · 全部时间 · 有效`, { versions: verFilter(vid), statuses: VALID, created: period }, ['reporter', 'assignee']),
         ...issueBlock('pending', `${vname} 当前 待处理问题`, `${vname} · 新创建、处理中、挂起`, { versions: verFilter(vid), statuses: PENDING }),
         { key: 'closed', name: `${regLabel(reg)} ${when} 回归关闭数`, cond: `${regLabel(reg)} · ${hasPeriod ? `更新 ${span}` : '全部时间'} · 关闭`, f: { versions: regVersions(reg), statuses: CLOSED, updated: period }, groupBy: ['reporter', 'assignee'] },
@@ -2644,18 +2725,19 @@
 
       {
         const [, plans, versions] = await Promise.all([
-          Promise.all(rows.map(async (r) => { r.count = await issueCount(projectId, r.f); })),
+          reuseRows ? null : Promise.all(rows.map(async (r) => { r.count = await issueCount(projectId, r.f); })),
           loadPlans(projectId, vid, start, end),
           versionOptions(projectId),
-          Promise.all(rows.filter((r) => r.critical).map(async (r) => {
+          reuseRows ? null : Promise.all(rows.filter((r) => r.critical).map(async (r) => {
             r.issues = (await request('/v1/issues/list', { method: 'POST', body: { ...issueBody(projectId, r.f), pageSize: 100 } })).list || [];
           })),
           // 需要按人汇总的行，拉出问题明细后按报告人 / 经办人分组，数量多的在前
-          Promise.all(rows.filter((r) => r.groupBy).map(async (r) => {
+          reuseRows ? null : Promise.all(rows.filter((r) => r.groupBy).map(async (r) => {
             const issues = await listIssues(projectId, r.f);
             r.groups = r.groupBy.map((field) => ({ field, people: groupPeople(issues, field) }));
           })),
         ]);
+        lastProgress = { args, rows };
         const vnames = new Map(versions.map((v) => [v.id, v.vname]));
 
         const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
@@ -2753,7 +2835,7 @@
             <td class="py-2 pr-3 text-right font-mono text-green-600">${r.pass}</td>
             <td class="py-2 pr-3 text-right font-mono ${r.fail ? 'text-red-600' : ''}">${r.fail}</td>
             <td class="py-2 pr-3 text-right font-mono ${r.block ? 'text-amber-600' : ''}">${r.block}</td>
-            <td class="py-2 pr-3 text-right font-mono text-slate-500">${r.prepare}</td>
+            <td class="py-2 pr-3 text-right font-mono ${r.prepare ? 'text-sky-600' : 'text-slate-400'}">${r.prepare}</td>
             <td class="py-2 pr-3 text-right font-mono">${r.execRate}</td>
             <td class="py-2 text-right font-mono">${r.passRate}</td>`}
           </tr>${moduleRow(r)}`).join('')
@@ -2795,34 +2877,147 @@
           ...(planRows.length
             ? planRows.flatMap((r, i) => [
               `${i + 1}.${r.name}（${r.status}）：` + (r.noStat ? '统计获取失败'
-                : `用例${r.total}，通过${r.pass}，失败${r.fail}，阻塞${r.block}，未执行${r.prepare}，执行率${r.execRate}，通过率${r.passRate}`),
+                : `用例${r.total}，通过${r.pass}，失败${r.fail}，BLOCK${r.block}，未开始${r.prepare}，执行率${r.execRate}，通过率${r.passRate}`),
               ...moduleLines(r),
             ])
             : [`${vname}在测试周期内没有测试计划`]),
         ].join('\n');
+        // 执行人汇总：默认选中全部计划，选择变化时重算表格和文字版第三段
+        // 只刷新计划时保留之前勾选的计划（按计划名对应，新出现的计划默认选中）
+        const prevSel = reuseRows && planPeopleState
+          ? { names: new Set(planPeopleState.rows.map((r) => r.name)), sel: new Set(planPeopleState.rows.filter((r, i) => planPeopleState.sel.has(i)).map((r) => r.name)) }
+          : null;
+        planPeopleState = {
+          rows: planRows,
+          sel: new Set(planRows.map((r, i) => i).filter((i) => !prevSel || prevSel.sel.has(planRows[i].name) || !prevSel.names.has(planRows[i].name))),
+          baseText: $('progText').textContent,
+        };
+        renderPlanPeople();
         $('progResult').classList.remove('hidden');
-        stampTime('progTime');
+        if (!reuseRows) stampTime('progTime');
+        stampTime('planTime');
         return plans;
       }
     }
 
+    // ---------- 版本进度：用例执行按执行人汇总（可选计划） ----------
+    let planPeopleState = null;   // { rows: 计划行, sel: 选中的计划下标, baseText: 文字版前两段 }
+
+    function renderPlanPeople() {
+      const { rows, sel, baseText } = planPeopleState;
+      const chosen = rows.filter((r, i) => sel.has(i));
+      const byPerson = pendingByPerson(chosen);
+      const failedPlans = chosen.filter((r) => r.modulesFailed).length;
+      const withCases = rows.filter((r) => r.modules);
+      $('planPeople').classList.toggle('hidden', !withCases.length);
+      const chip = (r, i) => `<label class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border cursor-pointer select-none ${sel.has(i) ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-300 bg-white text-slate-500'}">
+          <input type="checkbox" data-pp-plan="${i}" class="accent-blue-600" ${sel.has(i) ? 'checked' : ''} />${esc(r.name)}</label>`;
+      $('planPeople').innerHTML = `
+        <div class="font-medium text-slate-700 text-sm mb-2">👤 用例执行按执行人汇总
+          <span class="font-normal text-xs text-slate-400">已执行按用例上记录的执行人统计，各状态后面是占已执行的比例；未执行的执行人取已分配的，没分配的按同模块已执行用例的执行人推断（标「推断」，多人时合在一起），与上面模块树一致${byPerson.unassigned ? `；另有 ${byPerson.unassigned} 条未执行推断不出执行人` : ''}${failedPlans ? `；${failedPlans} 个计划的用例获取失败，未计入` : ''}</span></div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
+          <span class="text-slate-500">统计计划（${chosen.length}/${rows.length}）：</span>
+          ${rows.map((r, i) => (r.modules || r.modulesFailed ? chip(r, i) : '')).join('')}
+          <button type="button" data-pp-all="1" class="ml-1 text-blue-600 hover:underline">全选</button>
+          <button type="button" data-pp-all="0" class="text-blue-600 hover:underline">全不选</button>
+        </div>
+        ${byPerson.people.length ? `<div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap">
+          <thead class="text-slate-500 border-b border-slate-200"><tr>
+            <th class="py-1.5 pr-3 font-normal">执行人</th>
+            <th class="py-1.5 pr-3 font-normal text-right" title="全部状态：通过 + 失败 + BLOCK + NA + 未开始">全部</th>
+            <th class="py-1.5 pr-3 font-normal text-right">未开始</th>
+            <th class="py-1.5 pr-3 font-normal text-right">已执行</th>
+            ${CASE_STATUS.map(([, label]) => `<th class="py-1.5 pr-3 font-normal text-right">${label}</th>`).join('')}
+            <th class="py-1.5 pr-3 font-normal text-right" title="已执行 ÷（已执行 + 未执行）">执行率</th>
+            <th class="py-1.5 font-normal">未执行所在计划</th>
+          </tr></thead>
+          <tbody class="divide-y divide-slate-100">${byPerson.people.map((p) => `
+            <tr>
+              <td class="py-1.5 pr-3 text-slate-700">${esc(p.name)}${p.inferred ? ' <span class="text-xs text-amber-600" title="用例上没有分配执行人，按同模块已执行用例的执行人推断">推断</span>' : ''}</td>
+              <td class="py-1.5 pr-3 text-right font-mono font-bold text-slate-900">${p.executed + p.total}</td>
+              <td class="py-1.5 pr-3 text-right font-mono ${p.total ? 'text-sky-600' : 'text-slate-300'}">${p.total || '—'}</td>
+              <td class="py-1.5 pr-3 text-right font-mono">${p.executed || '<span class="text-slate-300">—</span>'}</td>
+              ${CASE_STATUS.map(([k, , color]) => `<td class="py-1.5 pr-3 text-right font-mono ${p.done[k] ? color : 'text-slate-300'}">${p.done[k]
+                ? `${p.done[k]} <span class="text-xs text-slate-400">${rate(p.done[k], p.executed)}</span>` : '—'}</td>`).join('')}
+              <td class="py-1.5 pr-3 text-right font-mono">${p.executed ? rate(p.executed, p.executed + p.total) : '<span class="text-slate-300">—</span>'}</td>
+              <td class="py-1.5 text-slate-500">${p.plans.map((pl) => `<div><a href="${esc(pl.url)}" target="_blank" class="text-blue-600 hover:underline">${esc(pl.name)}</a> <span class="font-mono">${pl.n}</span></div>`).join('') || '<span class="text-slate-300">—</span>'}</td>
+            </tr>`).join('')}
+          </tbody></table></div>`
+          : `<p class="text-sm text-slate-400">${chosen.length ? '所选计划没有执行记录，未执行用例也推断不出执行人' : '请至少选择一个计划'}</p>`}`;
+
+      // 文字版第三段
+      const lines = byPerson.people.length || byPerson.unassigned ? [
+        `三、用例执行按执行人汇总${chosen.length < rows.length ? `（${chosen.map((r) => r.name).join('、')}）` : ''}`,
+        ...byPerson.people.map((p, i) => {
+          const done = p.executed
+            ? `已执行${p.executed}（${CASE_STATUS.filter(([k]) => p.done[k]).map(([k, label]) => `${label}${p.done[k]}/${rate(p.done[k], p.executed)}`).join('，')}）`
+            : '';
+          const todo = p.total ? `未开始${p.total}${p.inferred ? '（推断）' : ''}（${p.plans.map((pl) => `${pl.name}${pl.n}`).join('，')}）` : '';
+          return `${i + 1}.${p.name}：全部${p.executed + p.total}；${[done, todo].filter(Boolean).join('；')}${p.executed && p.total ? `；执行率${rate(p.executed, p.executed + p.total)}` : ''}`;
+        }),
+        ...(byPerson.unassigned ? [`未开始且未分配执行人：${byPerson.unassigned}条`] : []),
+      ] : [];
+      $('progText').textContent = [baseText, ...lines].join('\n');
+    }
+
     // ---------- 人员数据 ----------
     const PEOPLE_KEY = 'ctc-query.people';
-    // 统计人员快捷选项：点一下替换为该名单（ID 为 CTC 用户 ID）
-    const PEOPLE_PRESETS = [
+    // 统计人员快捷选项：点一下替换为该名单（ID 为 CTC 用户 ID）；可新增、编辑、删除，保存在本机
+    const PRESETS_KEY = 'ctc-query.peoplePresets';
+    const DEFAULT_PEOPLE_PRESETS = [
       {
         name: 'XS移动端通用人员',
         people: [{ id: 111, name: '吴雅媚' }, { id: 2757, name: '谭杰尹' }, { id: 2860, name: '谭钧龙' }, { id: 2817, name: '陈芋霖' }],
       },
     ];
+    function loadPresets() {
+      try {
+        const saved = JSON.parse(store.get(PRESETS_KEY) || 'null');
+        if (Array.isArray(saved)) return saved;
+      } catch (e) { /* 读不到就用默认 */ }
+      return DEFAULT_PEOPLE_PRESETS.map((g) => ({ ...g, people: g.people.map((u) => ({ ...u })) }));
+    }
+    function savePresets(list) {
+      store.set(PRESETS_KEY, JSON.stringify(list));
+      renderPeoplePresets();
+    }
+    let presetEditing = null;   // 正在编辑的快捷选项下标；'new' = 新增
 
     function renderPeoplePresets() {
       const current = loadPeopleList().map((u) => u.id).sort().join(',');
-      $('peoplePresets').innerHTML = PEOPLE_PRESETS.map((g, i) => {
+      const presets = loadPresets();
+      $('peoplePresets').innerHTML = presets.length ? presets.map((g, i) => {
         const on = g.people.map((u) => u.id).sort().join(',') === current;
-        return `<button type="button" data-preset="${i}" title="${esc(g.people.map((u) => u.name).join('、'))}"
-          class="px-3 py-1 rounded-full border transition ${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600'}">${on ? '✓ ' : ''}${esc(g.name)}（${g.people.length}人）</button>`;
-      }).join('');
+        const editing = presetEditing === i;
+        return `<span class="group inline-flex items-center rounded-full border transition ${editing ? 'ring-2 ring-blue-300 ' : ''}${on ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-blue-400'}">
+          <button type="button" data-preset="${i}" title="${esc(g.people.map((u) => u.name).join('、'))}" class="pl-3 pr-1 py-1 ${on ? '' : 'hover:text-blue-600'}">${on ? '✓ ' : ''}${esc(g.name)}（${g.people.length}人）</button>
+          <button type="button" data-preset-edit="${i}" title="编辑：改名称、增删人员或删除" class="pr-2 pl-1 py-1 opacity-60 hover:opacity-100">✎</button>
+        </span>`;
+      }).join('') : '<span class="text-slate-400">还没有快捷选项</span>';
+    }
+
+    // 编辑：先把该快捷选项的人员载入下方名单，在名单里增删后点保存
+    function openPresetEditor(i) {
+      presetEditing = i;
+      const isNew = i === 'new';
+      const g = isNew ? null : loadPresets()[i];
+      if (g) savePeopleList(g.people.map((u) => ({ ...u })));
+      $('presetEditorTitle').textContent = isNew ? '新增快捷选项' : '编辑快捷选项';
+      $('presetName').value = g ? g.name : '';
+      $('presetDeleteBtn').classList.toggle('hidden', isNew);
+      updatePresetHint();
+      $('presetEditor').classList.remove('hidden');
+      renderPeoplePresets();
+      $('presetName').focus();
+    }
+    function updatePresetHint() {
+      const n = loadPeopleList().length;
+      $('presetEditorHint').textContent = `人员 = 下方当前名单（${n} 人）：用搜索框添加、点 × 移除，调整好后点「保存」`;
+    }
+    function closePresetEditor() {
+      presetEditing = null;
+      $('presetEditor').classList.add('hidden');
+      renderPeoplePresets();
     }
     let usersCache = null;
 
@@ -2834,6 +3029,7 @@
       store.set(PEOPLE_KEY, JSON.stringify(list));
       renderPeopleChips();
       renderPeoplePresets();
+      if (presetEditing !== null) updatePresetHint();
     }
 
     function renderPeopleChips() {
@@ -3581,6 +3777,22 @@
       }
     }
 
+    // 问题创建时间：接口字段名不统一，依次取；秒 / 毫秒时间戳和日期字符串都支持
+    function issueCreated(i) {
+      const v = [i.createdAt, i.created, i.createTime, i.createDate, i.created_at].find((x) => x !== undefined && x !== null && x !== '');
+      if (v === undefined) return null;
+      const d = typeof v === 'number' || /^\d+$/.test(v) ? new Date(Number(v) < 1e12 ? Number(v) * 1000 : Number(v)) : new Date(v);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    // 列表里显示「10-14 15:32」（跨年时带年份），悬停显示完整时间
+    function fmtIssueTime(d, full = false) {
+      if (!d) return '';
+      const p2 = (n) => String(n).padStart(2, '0');
+      const date = `${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+      const time = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+      return full || d.getFullYear() !== new Date().getFullYear() ? `${d.getFullYear()}-${date} ${time}` : `${date} ${time}`;
+    }
+
     function renderWeekly(pkey) {
       const { w, cats } = lastWeekly;
       const issueKey = (i) => `${i.pkey || pkey}-${i.issueNum}`;
@@ -3607,6 +3819,7 @@
               <thead class="text-slate-500 border-b border-slate-200">
                 <tr>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">编号</th><th class="py-2 pr-3 font-normal">标题</th>
+                  <th class="py-2 pr-3 font-normal whitespace-nowrap">创建时间</th>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">状态</th><th class="py-2 pr-3 font-normal whitespace-nowrap">严重程度</th>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">优先级</th><th class="py-2 pr-3 font-normal whitespace-nowrap">报告人</th>
                   <th class="py-2 pr-3 font-normal whitespace-nowrap">经办人</th>
@@ -3617,6 +3830,7 @@
                 <tr>
                   <td class="py-2 pr-3 whitespace-nowrap"><a href="${issueUrl(i)}" target="_blank" class="font-mono text-blue-600 hover:underline">${esc(issueKey(i))}</a></td>
                   <td class="py-2 pr-3 text-slate-700 min-w-[16rem]"><a href="${issueUrl(i)}" target="_blank" class="text-blue-600 hover:underline">${esc(i.summary || '')}</a></td>
+                  <td class="py-2 pr-3 whitespace-nowrap text-slate-500 font-mono text-xs" title="${esc(fmtIssueTime(issueCreated(i), true))}">${esc(fmtIssueTime(issueCreated(i))) || '—'}</td>
                   <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.issueStatusName || '')}</td>
                   <td class="py-2 pr-3 whitespace-nowrap ${sevColor[i.severityName] || 'text-slate-500'}">${esc(i.severityName || '')}</td>
                   <td class="py-2 pr-3 whitespace-nowrap text-slate-500">${esc(i.priorityName || '')}</td>
@@ -3772,6 +3986,35 @@
       e.target.textContent = masked ? '隐藏' : '显示';
     });
     $('queryBtn').addEventListener('click', () => { setCrTab('rate'); runQuery(); });
+    // 只刷新测试计划：沿用上次查询的版本、周期和 Bug 统计
+    $('planRefreshBtn').addEventListener('click', async () => {
+      if (!lastProgress) return showError('请先点「查询」');
+      showError('');
+      const btn = $('planRefreshBtn');
+      btn.disabled = true;
+      btn.textContent = '刷新中…';
+      try {
+        await loadProgress({ ...lastProgress.args, reuseRows: lastProgress.rows });
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 刷新计划';
+      }
+    });
+    $('planPeople').addEventListener('change', (e) => {
+      const i = e.target.dataset.ppPlan;
+      if (i == null) return;
+      if (e.target.checked) planPeopleState.sel.add(Number(i));
+      else planPeopleState.sel.delete(Number(i));
+      renderPlanPeople();
+    });
+    $('planPeople').addEventListener('click', (e) => {
+      const all = e.target.dataset.ppAll;
+      if (all == null) return;
+      planPeopleState.sel = new Set(all === '1' ? planPeopleState.rows.map((r, i) => i) : []);
+      renderPlanPeople();
+    });
     $('leftoverBtn').addEventListener('click', () => { setCrTab('leftover'); runLeftover(); });
     document.querySelectorAll('[data-crtab]').forEach((b) => b.addEventListener('click', () => setCrTab(b.dataset.crtab)));
     setCrTab(crTab);
@@ -3882,9 +4125,35 @@
       if (!btn) return;
       savePeopleList(loadPeopleList().filter((u) => String(u.id) !== btn.dataset.removePerson));
     });
+    $('presetAddBtn').addEventListener('click', () => openPresetEditor('new'));
+    $('presetCancelBtn').addEventListener('click', closePresetEditor);
+    $('presetSaveBtn').addEventListener('click', () => {
+      const name = $('presetName').value.trim();
+      const people = loadPeopleList();
+      if (!name) return showError('请填写快捷选项名称');
+      if (!people.length) return showError('名单为空：先在下方添加人员');
+      showError('');
+      const list = loadPresets();
+      const item = { name, people: people.map((u) => ({ id: u.id, name: u.name })) };
+      if (presetEditing === 'new') list.push(item);
+      else list[presetEditing] = item;
+      savePresets(list);
+      closePresetEditor();
+    });
+    $('presetDeleteBtn').addEventListener('click', () => {
+      const list = loadPresets();
+      const g = list[presetEditing];
+      if (!g || !confirm(`删除快捷选项「${g.name}」？（只删快捷选项，不影响下方名单）`)) return;
+      list.splice(presetEditing, 1);
+      savePresets(list);
+      closePresetEditor();
+    });
+    $('presetName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('presetSaveBtn').click(); });
     $('peoplePresets').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-preset]');
-      if (btn) savePeopleList(PEOPLE_PRESETS[Number(btn.dataset.preset)].people.map((u) => ({ ...u })));
+      if (btn) { savePeopleList(loadPresets()[Number(btn.dataset.preset)].people.map((u) => ({ ...u }))); return; }
+      const edit = e.target.closest('[data-preset-edit]');
+      if (edit) openPresetEditor(Number(edit.dataset.presetEdit));
     });
     renderPeopleChips();
     renderPeoplePresets();
