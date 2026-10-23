@@ -135,9 +135,32 @@ const readBody = (req) => new Promise((resolve) => {
   req.on('end', () => resolve(b ? JSON.parse(b) : {}));
 });
 
-http.createServer(async (req, res) => {
+// ---------- 后台运行：没有页面访问一段时间后自动退出 ----------
+// 配置页每 30 秒发一次心跳；超过 IDLE_MS 没有任何请求、且没有进行中的请求（比如正在推送）就退出。
+// --keep：不自动退出（调试用）；--open：启动后打开浏览器（已经在运行时也只打开浏览器）
+const IDLE_MS = Number(process.env.CTC_DAILY_IDLE_MS) || 5 * 60 * 1000;   // 环境变量只在测试时用
+const KEEP = process.argv.includes('--keep');
+const OPEN = process.argv.includes('--open');
+let lastSeen = Date.now();
+let active = 0;
+const openBrowser = () => spawn('cmd.exe', ['/c', 'start', '', `http://127.0.0.1:${PORT}`], { windowsHide: true, detached: true, stdio: 'ignore' }).unref();
+if (!KEEP) {
+  setInterval(() => {
+    if (!active && Date.now() - lastSeen > IDLE_MS) {
+      console.log('配置页已关闭一段时间，服务自动退出（定时推送不受影响）');
+      process.exit(0);
+    }
+  }, Math.min(30 * 1000, IDLE_MS / 2)).unref();
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+  // 工具站的 /api/ping 探测不算有人在用
+  if (url.pathname !== '/api/ping') lastSeen = Date.now();
+  active++;
+  res.on('close', () => { active--; lastSeen = Date.now(); });
   try {
-    const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+    if (url.pathname === '/api/heartbeat') return send(res, 200, { ok: true });
     // 工具站页面用来探测配置页是否在运行：只开放这一个跨域接口，配置相关接口不对外
     if (url.pathname === '/api/ping') {
       res.writeHead(200, {
@@ -201,7 +224,18 @@ http.createServer(async (req, res) => {
   } catch (e) {
     send(res, 500, { error: e.message });
   }
-}).listen(PORT, '127.0.0.1', () => {
+});
+server.on('error', (e) => {
+  // 已经有一个配置服务在运行：直接打开页面，本进程退出
+  if (e.code === 'EADDRINUSE') {
+    if (OPEN) openBrowser();
+    console.log(`配置页已经在运行：http://127.0.0.1:${PORT}`);
+    process.exit(0);
+  }
+  throw e;
+});
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`推送配置页已启动：http://127.0.0.1:${PORT}`);
-  console.log('关闭这个窗口即可停止配置页（不影响定时推送）');
+  console.log(KEEP ? '关闭这个窗口即可停止配置页（不影响定时推送）' : '配置页关闭约 5 分钟后服务自动退出（不影响定时推送）');
+  if (OPEN) openBrowser();
 });

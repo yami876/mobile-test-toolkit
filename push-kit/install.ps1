@@ -57,6 +57,15 @@ Remove-Item -LiteralPath $tmp -Recurse -Force
 $kitVersion = (Get-Content -LiteralPath (Join-Path $InstallDir 'version.txt') -Raw).Trim()
 Ok "程序版本 $kitVersion"
 
+# 清理旧版本留下的文件：手动更新时的备份目录、旧版的「手动推送 / 预览」脚本（配置页里已有同样的按钮）
+# 配置（config.json）、登录信息（token.json）、日志（run.log）、免安装 Node（node\）都保留
+$legacy = @(Get-ChildItem -LiteralPath $InstallDir -Directory -Filter 'backup-*' -ErrorAction SilentlyContinue) +
+  @(Get-ChildItem -LiteralPath $InstallDir -File -Filter '*.bat' -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '手动推送-*' -or $_.Name -like '预览-*' })
+if ($legacy.Count) {
+  $legacy | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+  Ok "已清理旧版本文件 $($legacy.Count) 个：$(($legacy | ForEach-Object Name) -join '、')"
+}
+
 # ---------- 2. 配置文件 ----------
 Step '准备配置文件'
 $configPath = Join-Path $InstallDir 'config.json'
@@ -108,14 +117,17 @@ if (-not $node) {
 # ---------- 4. 启动脚本 + 快捷方式 ----------
 Step '创建启动脚本'
 $launcher = Join-Path $InstallDir '打开推送配置.bat'
+# 配置服务在后台隐藏运行（不弹命令行窗口），服务启动后自己打开浏览器；配置页关闭约 5 分钟后自动退出
+# 禁用了 VBScript 的电脑退回 conhost --headless
+$hasVbs = Test-Path (Join-Path $env:SystemRoot 'System32\vbscript.dll')
+$startLine = if ($hasVbs) { 'start "" wscript.exe //B //Nologo "%~dp0run-hidden.vbs" "' + $node + '" server.mjs --open' }
+  else { 'start "" conhost.exe --headless "' + $node + '" server.mjs --open' }
 WriteUtf8NoBom $launcher (@(
   '@echo off',
   'chcp 65001 >nul',
-  'rem 打开 CTC 数据推送配置页（关闭本窗口即停止配置页，不影响定时推送）',
+  'rem 打开 CTC 数据推送配置页：服务在后台运行，配置页关闭约 5 分钟后自动退出，不影响定时推送',
   'cd /d "%~dp0"',
-  'start "" http://127.0.0.1:8766',
-  ('"' + $node + '" server.mjs'),
-  'pause'
+  $startLine
 ) -join "`r`n")
 Ok $launcher
 
@@ -127,6 +139,7 @@ if (-not $NoShortcut) {
   $sc.TargetPath = $launcher
   $sc.WorkingDirectory = $InstallDir
   $sc.IconLocation = "$env:SystemRoot\System32\shell32.dll,14"
+  $sc.WindowStyle = 7   # 启动脚本最小化运行，双击时不闪命令行窗口
   $sc.Description = 'CTC 数据推送配置'
   $sc.Save()
   Ok "桌面快捷方式：$lnk"
@@ -165,15 +178,17 @@ if ($tasks.Count) {
 
 Write-Host "`n================ 安装完成 ================" -ForegroundColor Green
 Write-Host '接下来在配置页里：飞书登录 → 选项目 → 填群机器人 Webhook、选人员 → 预览 / 立即推送验证 → 保存并应用定时任务'
-Write-Host '提示：下载的「CTC推送一键安装.bat」现在可以删除；桌面的「CTC 推送配置」快捷方式请保留，以后从它打开配置页。' -ForegroundColor Yellow
+Write-Host '提示：桌面的「CTC 推送配置」快捷方式请保留，以后从它打开配置页；下载的安装包会在关闭本窗口时自动删除。' -ForegroundColor Yellow
 if (-not $NoLaunch) {
-  # 配置页已经在运行（比如更新安装）就直接打开，否则启动
-  $running = $false
-  try { $running = (Invoke-WebRequest -Uri 'http://127.0.0.1:8766/api/ping' -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { }
-  if ($running) {
-    Warn '配置页已经在运行：这次更新的程序要关掉原来的「打开推送配置」窗口、重新打开后才生效'
-    Start-Process 'http://127.0.0.1:8766'
-  } else {
-    Start-Process -FilePath $launcher -WorkingDirectory $InstallDir
-  }
+  # 更新安装时旧的配置服务可能还在运行（旧版不会自动退出）：先停掉本安装目录的那个，再用新程序启动
+  try {
+    $owner = (Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8766 -State Listen -ErrorAction Stop | Select-Object -First 1).OwningProcess
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$owner" -ErrorAction Stop
+    if ($proc.Name -eq 'node.exe' -and $proc.CommandLine -like '*server.mjs*') {
+      Stop-Process -Id $owner -Force
+      Start-Sleep -Milliseconds 500
+      Ok '已停止旧的配置页服务'
+    }
+  } catch { }
+  Start-Process -FilePath $launcher -WorkingDirectory $InstallDir -WindowStyle Hidden
 }

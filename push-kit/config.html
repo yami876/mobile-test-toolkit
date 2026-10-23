@@ -32,6 +32,9 @@
   </header>
 
   <main class="max-w-5xl mx-auto px-6 py-6 space-y-6">
+    <div id="offline" class="hidden rounded-lg p-3 text-sm bg-amber-50 text-amber-800 border border-amber-200">
+      ⚠️ 配置服务已关闭，现在保存、预览、推送都不会生效。请双击桌面的「CTC 推送配置」重新打开服务，然后回到本页继续操作即可（本页没保存的修改还在；顺带打开的新页面可以关掉）。
+    </div>
     <div id="msg" class="hidden rounded-lg p-3 text-sm"></div>
 
     <!-- CTC 登录 + 项目 -->
@@ -174,8 +177,16 @@
     let iterating = [];
     let dirty = false;
 
+    const OFFLINE_TIP = '配置服务已关闭（页面长时间没打开或电脑睡眠后会自动退出），请双击桌面的「CTC 推送配置」重新打开服务，然后回到本页再点一次就行，本页改过的内容还在';
     async function api(p, body) {
-      const r = await fetch(p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      let r;
+      try {
+        r = await fetch(p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      } catch (e) {
+        // 连不上本机服务：给出能照着做的提示，而不是浏览器的「Failed to fetch」
+        $('offline').classList.remove('hidden');
+        throw new Error(OFFLINE_TIP);
+      }
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || r.status);
       return j;
@@ -505,6 +516,12 @@
     async function loadLog() { try { $('log').textContent = (await api('/api/log')).join('\n'); } catch (e) { /* 忽略 */ } }
     $('refreshBtn').addEventListener('click', () => { loadTasks(); loadLog(); });
     window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+    // 心跳：页面开着就告诉本机服务别退出（服务在没有页面访问几分钟后自动退出）；连不上时提示重新打开
+    setInterval(() => {
+      fetch('/api/heartbeat', { cache: 'no-store' })
+        .then(() => $('offline').classList.add('hidden'))
+        .catch(() => $('offline').classList.remove('hidden'));
+    }, 30000);
 
     (async () => {
       config = await api('/api/config');
