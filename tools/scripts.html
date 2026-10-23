@@ -32,7 +32,7 @@
     </div>
 
     <!-- Tab 切换 -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6 sticky top-16 bg-slate-50 py-3 z-10">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6 sticky top-16 bg-slate-50 py-3 z-10">
       <button data-target="export-log" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">📦</span>
         <span class="text-sm font-medium text-slate-700">导出 XS 日志</span>
@@ -48,6 +48,10 @@
       <button data-target="record-screen" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
         <span class="text-2xl">🎥</span>
         <span class="text-sm font-medium text-slate-700">屏幕录制</span>
+      </button>
+      <button data-target="device-info" class="script-tab flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-400 transition text-left">
+        <span class="text-2xl">📱</span>
+        <span class="text-sm font-medium text-slate-700">采集测试机信息</span>
       </button>
     </div>
 
@@ -218,6 +222,51 @@
         </div>
         <pre id="s-rec-ps1" class="script-block bg-slate-900 text-slate-100 rounded p-4 overflow-x-auto max-h-72"></pre>
       </div>
+    </section>
+
+    <!-- ============== 5. 采集测试机信息 ============== -->
+    <section id="device-info" class="script-section bg-white rounded-lg border border-slate-200 p-6 mb-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">📱 采集测试机信息（Android + iOS）</h2>
+      <p class="text-slate-600 mb-4">一次采集所有已连接的 Android / iOS 设备：型号、序列号、系统、CPU/GPU、内存、存储、分辨率、MAC、WebView、版本区域、性能档位等，写入 <code class="bg-slate-100 px-1">测试机信息.xlsx</code>。按序列号 / MAC / 型号 / 名称匹配已有行，重复采集只更新，手工维护的列（资产编号、借用人等）不会被覆盖。</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-5">
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+          <div class="font-semibold text-amber-900 mb-1">⚙️ 一键安装会自动处理</div>
+          <ul class="text-amber-800 list-disc pl-5 space-y-0.5">
+            <li>Python 3.9+：没有就自动安装（当前用户，不需要管理员）</li>
+            <li>独立 Python 环境 + openpyxl、pymobiledevice3，不影响电脑上其他 Python 项目</li>
+            <li>adb：找不到就自动下载 platform-tools</li>
+            <li>苹果驱动：只检查不安装，采集 iOS 需装 iTunes（微软商店）或爱思助手</li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded p-3 text-sm">
+          <div class="font-semibold text-green-900 mb-1">🚀 用法</div>
+          <ul class="text-green-800 list-disc pl-5 space-y-0.5">
+            <li>Android 打开 USB 调试并授权；iPhone / iPad 解锁并点「信任此电脑」</li>
+            <li>先关掉 Excel，双击桌面「采集测试机信息」</li>
+            <li>结果写入 <code class="bg-green-100 px-1">%USERPROFILE%\device-info\测试机信息.xlsx</code></li>
+            <li>已有自己的表：把 Excel 拖到桌面快捷方式上，就写入那个表</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border border-slate-200 rounded-lg p-4 mb-4 text-sm space-y-2">
+        <div class="font-medium text-slate-700">第一次使用：一键安装</div>
+        <p class="text-slate-500">下载后双击运行，装完会在桌面生成「采集测试机信息」快捷方式。</p>
+        <a href="../device-kit/install.bat" download="测试机信息采集一键安装.bat" class="inline-block mt-1 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700">⬇ 下载一键安装</a>
+        <p class="text-slate-400">更新脚本：重新运行一次一键安装即可，表格不会被覆盖。装完后下载的 .bat 可以删除。</p>
+      </div>
+
+      <details class="text-sm text-slate-600">
+        <summary class="cursor-pointer text-slate-500 hover:text-blue-600">已经配好环境，想手动运行？</summary>
+        <div class="mt-2 space-y-2">
+          <p>把下面两个文件放同一目录（<code class="bg-slate-100 px-1">pip install openpyxl pymobiledevice3</code>，adb 在 PATH 中），然后执行 <code class="bg-slate-100 px-1">python 采集设备信息.py</code>，可加 <code class="bg-slate-100 px-1">-o 表格.xlsx</code> 指定写入的表。</p>
+          <div class="flex flex-wrap gap-2">
+            <a href="../device-kit/采集设备信息.py" download class="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300">⬇ 采集设备信息.py（主脚本）</a>
+            <a href="../device-kit/ios采集.py" download class="px-3 py-1.5 rounded bg-slate-200 hover:bg-slate-300">⬇ ios采集.py（iOS 模块 + 苹果机型表）</a>
+          </div>
+        </div>
+      </details>
     </section>
 
   </main>
@@ -970,7 +1019,7 @@ try {
 
     // Tab 切换：一次只显示一个脚本
     const STORAGE_KEY = 'mtt-scripts-last-tab';
-    const VALID_IDS = ['export-log', 'export-gcode', 'screenshot', 'record-screen'];
+    const VALID_IDS = ['export-log', 'export-gcode', 'screenshot', 'record-screen', 'device-info'];
 
     function showScript(id) {
       document.querySelectorAll('.script-section').forEach(s => s.classList.add('hidden'));

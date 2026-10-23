@@ -242,6 +242,16 @@ const TOOLS = [
     icon: '🎥',
     internal: true,
   },
+  {
+    name: '采集测试机信息',
+    desc: '一次采集所有已连接的 Android / iOS 设备参数，写入测试机信息 Excel；附一键安装环境',
+    url: 'tools/scripts.html#device-info',
+    platforms: ['Android', 'iOS'],
+    category: 'mini',
+    tags: ['测试机', '设备信息', '资产', 'Excel', 'adb', 'pymobiledevice3', '脚本', 'python'],
+    icon: '📱',
+    internal: true,
+  },
 
   // ----- 网页工具 -----
   {
