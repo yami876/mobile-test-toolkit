@@ -79,14 +79,14 @@ sys.stdout.reconfigure(errors="replace")
     "MT6991": "天玑9400/9400+", "MT6989": "天玑9300", "MT6985": "天玑9200",
     "MT6983": "天玑9000", "MT6896": "天玑8200", "MT6895": "天玑8100",
     "MT6893": "天玑1200", "MT6789": "Helio G99",
-    "MT6897": "天玑8300", "MT8792": "天玑8300", "MT8775": "天玑7300",
+    "MT6899": "天玑8500", "MT6897": "天玑8300", "MT8792": "天玑8300", "MT8775": "天玑7300",
     "MT8755": "天玑6300", "MT6835": "天玑6100+/6300",  # MT87xx 为平板版代号
     # 谷歌 / 三星
     "gs101": "Google Tensor", "gs201": "Google Tensor G2",
     "zuma": "Google Tensor G3", "zumapro": "Google Tensor G4",
     "mt8169": "MediaTek MT8169",
     # 华为海思（平台代号）
-    "orlando": "麒麟810",
+    "orlando": "麒麟810", "hi3660": "麒麟960",
     "s5e9925": "Exynos 2200", "s5e8855": "Exynos 1580", "Exynos 9611": "Exynos 9611",
 }
 
@@ -96,9 +96,9 @@ sys.stdout.reconfigure(errors="replace")
              "骁龙8 Gen1", "骁龙8 Gen1/8+ Gen1", "天玑9400", "天玑9400/9400+", "天玑9300", "天玑9200",
              "天玑9000", "Google Tensor G2", "Google Tensor G3", "Google Tensor G4"],
     "中端": ["骁龙888", "骁龙888/778G", "骁龙888+", "麒麟810", "骁龙750G", "骁龙865/870", "骁龙870", "骁龙865+", "骁龙865", "骁龙855", "骁龙845", "骁龙7+ Gen3",
-             "骁龙7 Gen3", "骁龙7+ Gen2", "骁龙778G", "天玑7300", "天玑8300", "天玑8200", "天玑8100", "天玑1200",
+             "骁龙7 Gen3", "骁龙7+ Gen2", "骁龙778G", "天玑7300", "天玑8500", "天玑8500-Ultra", "天玑8300", "天玑8200", "天玑8100", "天玑1200",
              "Google Tensor", "Exynos 2200", "Exynos 1580"],
-    "低端": ["骁龙695", "骁龙680", "骁龙660", "Helio G99", "MediaTek MT8169", "Exynos 9611", "天玑6300", "天玑6100+/6300"],
+    "低端": ["骁龙695", "骁龙685", "麒麟960", "骁龙680", "骁龙660", "Helio G99", "MediaTek MT8169", "Exynos 9611", "天玑6300", "天玑6100+/6300"],
 }
 
 # 亚马逊 Fire 平板型号代号 → 市场名
@@ -159,6 +159,11 @@ def 采集CPU(序列号):
         if 频率.isdigit():
             名称 = "骁龙870" if int(频率) >= 3150000 else ("骁龙865+" if int(频率) >= 3000000 else "骁龙865")
             return f"{名称} ({型号 or 平台})"
+    # 骁龙680/685 共用 SM6225，685 大核 2.8GHz、680 为 2.4GHz
+    if 型号.upper() == "SM6225":
+        频率 = shell(序列号, "cat /sys/devices/system/cpu/cpu7/cpufreq/cpuinfo_max_freq")
+        if 频率.isdigit():
+            return f"{'骁龙685' if int(频率) >= 2700000 else '骁龙680'} ({型号})"
     # 骁龙888/888+ 共用 SM8350，888+ 大核 2.995GHz、888 为 2.84GHz
     if 型号.upper() == "SM8350":
         频率 = shell(序列号, "cat /sys/devices/system/cpu/cpu7/cpufreq/cpuinfo_max_freq")
@@ -608,8 +613,8 @@ def 写入表格(路径, 记录列表):
                 continue  # 折叠屏只能读到当前所用屏幕，保留人工核对的内外屏分辨率
             if 列名 == "CPU" and "待查" in 记录[列名] and 原值:
                 continue  # 芯片识别不出来时，不覆盖表里已核对的名称
-            if 列名 == "CPU" and 记录[列名].split(" (")[0] in 原值 and "for Galaxy" in 原值:
-                continue  # 保留更精确的「for Galaxy」等定制版名称
+            if 列名 == "CPU" and 记录[列名].split(" (")[0] in 原值 and len(原值) > len(记录[列名].split(" (")[0]):
+                continue  # 保留更精确的定制版名称，如「for Galaxy」「8500-Ultra」
             if 列名 == "CPU" and "/" in 记录[列名].split(" (")[0] and 原值:
                 候选 = 记录[列名].split(" (")[0]  # 如「天玑6100+/6300」，共用代号无法区分
                 前缀 = re.match(r"\D+", 候选).group() if re.match(r"\D+", 候选) else ""
