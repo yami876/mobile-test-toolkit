@@ -826,13 +826,19 @@
     // ---------- 计算 ----------
     const pct = (num, den) => (den ? (num * 100) / den : 0);
 
+    // 关闭率统一保留一位小数；比较也用这个四舍五入后的值，避免显示 85.0% 却判成「< 85%」
+    const round1 = (value) => Math.round((value + 1e-9) * 10) / 10;
     function fmtPct(value) {
-      let text = value.toFixed(1);
-      if (text.endsWith('.0')) text = text.slice(0, -2);
-      return text + '%';
+      return round1(value).toFixed(1) + '%';
+    }
+    // 进度表里的执行率 / 通过率仍按整数显示（100% 而不是 100.0%）
+    function fmtPctShort(value) {
+      const text = round1(value).toFixed(1);
+      return (text.endsWith('.0') ? text.slice(0, -2) : text) + '%';
     }
 
-    const cmpSign = (value, threshold) => (value > threshold ? '>' : value === threshold ? '=' : '<');
+    // 达标规则：大于等于门槛即通过
+    const cmpSign = (value, threshold) => (round1(value) >= threshold ? '≥' : '<');
 
     // 未关闭的有效问题 = 已解决（等回归）+ 待处理（新创建、处理中、挂起）
     const CR_RESOLVED = [5];
@@ -862,8 +868,8 @@
         closed_s: closedS, valid_s: validS, left_s: validS - closedS,
         versions,
         open: { all: { resolved, pending }, a: { resolved: resolvedA, pending: pendingA }, s: { resolved: resolvedS, pending: pendingS } },
-        pass_rate: rate >= RATE_THRESHOLD,
-        pass_a: rateA >= A_THRESHOLD,
+        pass_rate: round1(rate) >= RATE_THRESHOLD,
+        pass_a: round1(rateA) >= A_THRESHOLD,
         pass_s: validS - closedS === 0,
       };
     }
@@ -924,8 +930,8 @@
             : `${fmtPct(key === 'a' ? s.rate_a : s.rate)} &lt; ${fmtPct(line)}`}</span></td>
           <td class="py-2 px-3">${link(s, o.resolved, CR_RESOLVED, severity)}</td>
           <td class="py-2 px-3">${link(s, o.pending, CR_PENDING, severity)}</td>
-          <td class="py-2 px-3 font-mono ${r >= line ? 'text-green-600' : 'text-amber-600'}"
-            title="${r >= line ? '已解决的问题回归关闭后即可达标' : '已解决的问题全部回归关闭后仍不达标，还需要处理待处理问题'}">
+          <td class="py-2 px-3 font-mono ${round1(r) >= line ? 'text-green-600' : 'text-amber-600'}"
+            title="${round1(r) >= line ? '已解决的问题回归关闭后即可达标' : '已解决的问题全部回归关闭后仍不达标，还需要处理待处理问题'}">
             (${s[closedKey]}+${o.resolved})/${s[validKey]} = ${fmtPct(r)}</td>
           <td class="py-2 px-3 ${gap ? 'text-red-600' : 'text-green-600'}">${gap ? `✗ 还差 ${gap} 个` : '✓ 可达标'}</td></tr>`);
       }));
@@ -955,7 +961,7 @@
 
     // 测试报告里的「关闭率指标」表格：已发布版本在前、当前版本在后，每格一个版本一行
     function closeRateTable(blocks) {
-      const ge = (v, t) => (v > t ? '>' : v === t ? '>=' : '<');
+      const ge = (v, t) => (round1(v) >= t ? '≥' : '<');
       const cell = (fn) => blocks.map(([title, s]) => `${title}：${fn(s)}`);
       const cols = [
         ['总体关闭率', cell((s) => `${s.closed}/${s.valid}=${fmtPct(s.rate)} ${ge(s.rate, RATE_THRESHOLD)} ${fmtPct(RATE_THRESHOLD)}`)],
@@ -1315,7 +1321,13 @@
       syncLeftoverEdits();
       const { vname } = leftoverData;
       const { buckets } = leftoverKept();
+      // 页面上移除的条目（包括风险问题）一律不发给 AI；隐藏的栏也不带
+      const removed = Object.values(leftoverData.buckets).flat().filter((it) => it.excluded).length;
       const info = (it) => {
+        const draft = [
+          loShow(it, 'impact') ? `影响：${it.impact || '-'}` : '',
+          loShow(it, 'workaround') ? `规避/恢复：${it.workaround || '-'}` : '',
+        ].filter(Boolean).join('；') || '（两栏都已隐藏）';
         const desc = it.description || '';
         return [
           `- ${loKey(it)} ${it.summary}`,
@@ -1323,13 +1335,14 @@
           `  问题现象：${descPart(desc, '[问题现象]', 300) || '-'}`,
           `  预期结果：${descPart(desc, '[预期结果]', 200) || '-'}`,
           `  复现概率：${descPart(desc, '[复现概率]', 30) || '-'}；测试环境：${descPart(desc, '[测试环境]', 120) || '-'}`,
-          `  当前草稿 —— 影响：${it.impact || '-'}；规避/恢复：${it.workaround || '-'}`,
+          `  当前草稿 —— ${draft}`,
           `  链接：${loUrl(it)}`,
         ].join('\n');
       };
       const groups = LO_GROUPS.filter((g) => g.detailed && buckets[g.key].length);
       return [
         `你是资深测试工程师，正在为「${vname}」版本的测试报告整理遗留问题。下面是按分组列出的遗留 bug（含问题现象、预期结果、复现概率和当前草稿）。`,
+        removed ? `注意：页面上已移除 ${removed} 条问题（含风险问题），下面已经不含它们；请只针对下面出现的编号输出，不要补充别的问题。` : '',
         '请逐条改写「影响」和「规避/恢复」：',
         '1. 影响：一句话说明对用户 / 业务的影响范围和程度（哪些场景、多大比例的用户、是否阻断主流程）；必现问题不用写复现概率，概率性问题要说明概率。',
         '2. 规避/恢复：给出用户可执行的规避方式或出问题后的恢复办法；确实没有就写「暂无规避方式」，不要编造不存在的功能入口。',
@@ -1339,7 +1352,7 @@
         '影响：……',
         '规避/恢复：……',
         '',
-        ...groups.flatMap((g) => [`## ${g.title}`, ...buckets[g.key].map(info), '']),
+        ...groups.flatMap((g) => [`## ${g.title}`, ...buckets[g.key].filter((it) => !it.excluded).map(info), '']),
       ].join('\n');
     }
 
@@ -1347,7 +1360,7 @@
     function fillLeftoverFromAi(text) {
       syncLeftoverEdits();
       const items = new Map();
-      Object.values(leftoverData.buckets).flat().forEach((it) => items.set(loKey(it), it));
+      Object.values(leftoverData.buckets).flat().forEach((it) => { if (!it.excluded) items.set(loKey(it), it); });
       const result = new Map();   // key -> { impact, workaround }
       const unknown = new Set();
       let cur = null;
@@ -2435,7 +2448,7 @@
       const d = new Date(ts * 1000);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     };
-    const rate = (num, den) => (den ? fmtPct(pct(num, den)) : '—');
+    const rate = (num, den) => (den ? fmtPctShort(pct(num, den)) : '—');
 
     // 计划时间：开始取实际开始（没有则取计划开始）；结束取实际结束，没结束的取计划结束，都没有则只看开始那天。
     // 不把「没结束」当成持续到现在：CTC 里很多老计划测完没点结束，会一直显示进行中
